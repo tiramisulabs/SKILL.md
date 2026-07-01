@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/recipes/monetization
 Coverage reference: i18n-cache-recipes.md
-Verification status: Source-verified (re-verified against ./src on branch more-qol)
+Verification status: Source-verified (re-verified against the target project installed `seyfert` package or provided Seyfert source)
 
 ## Page Summary
 

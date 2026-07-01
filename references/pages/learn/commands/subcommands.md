@@ -4,7 +4,7 @@ Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/
 
 Coverage reference: commands.md
 
-Verification status: Source-verified (seyfert-core branch more-qol, 2026-06)
+Verification status: Source-verified (seyfert-core the authoritative Seyfert source, 2026-06)
 
 ## Page Summary
 

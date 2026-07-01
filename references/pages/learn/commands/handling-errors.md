@@ -4,7 +4,7 @@ Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/
 
 Coverage reference: commands.md
 
-Verification status: Source-verified (branch more-qol)
+Verification status: Source-verified (the authoritative Seyfert source)
 
 ## Page Summary
 
@@ -298,7 +298,7 @@ export default class Ping extends Command {
 
 - `onMiddlewaresError`: docs MDX show `(context, error)` -> src has `(context, error: string, metadata: PluginMiddlewareDenialMetadata)` (chat.ts:355, base.ts:1271). The 3rd param is optional to use but exists; `metadata.middleware` names the denying middleware.
 - `onInternalError`: docs MDX show `(client, error)` -> src has `(client, command, error?)` — `command` is 2nd (chat.ts:358); in `commands.defaults` it is `Command | SubCommand | ContextMenuCommand` (base.ts:1266). For components/modals it is `(client, component, error?)` / `(client, modal, error?)`. The docs' `onInternalError: (client, error) => ...` binds the command instance to `error` — correct to `(client, _command, error)`.
-- Middleware `pass`: docs MDX destructure `{ context, next, stop, pass }` -> src `MiddlewareContext` only exposes `next` and `stop` (shared.ts:55-59). `pass` was removed (branch more-qol: "replace middleware pass() with stop()"). Use `stop()`/`stop(null)` to skip silently, `stop('reason')` to deny → `onMiddlewaresError`.
+- Middleware `pass`: docs MDX destructure `{ context, next, stop, pass }` -> src `MiddlewareContext` only exposes `next` and `stop` (shared.ts:55-59). `pass` was removed (the authoritative Seyfert source: "replace middleware pass() with stop()"). Use `stop()`/`stop(null)` to skip silently, `stop('reason')` to deny → `onMiddlewaresError`.
 - `onAfterRun` second arg is `error: unknown | undefined` (required param, may be `undefined`), not optional `error?` (chat.ts:352). It fires on success (undefined) AND after `onRunError` (the error) — handle.ts:133-138.
 - `onBeforeOptions`, `onOptionsError`, `onPermissionsFail` are chat `Command`-only; `ContextMenuCommand` (stablishContextCommandDefaults, handler.ts:576-590), `components`, and `modals` defaults do not accept them.
 - `PluginMiddlewareDenialMetadata` is re-exported at the root `seyfert` (`src/client/plugins.ts`), so `import type { PluginMiddlewareDenialMetadata } from 'seyfert'` if you need the type annotation (runtime hooks work without importing it).

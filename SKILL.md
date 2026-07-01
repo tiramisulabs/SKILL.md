@@ -1,19 +1,19 @@
 ---
 name: seyfert
-description: Deep Seyfert v5 guidance for building, updating, debugging, reviewing, and testing Discord bots with the Seyfert TypeScript framework. Use when a task mentions Seyfert, Discord bot commands, options, components, modals, events, plugins, i18n/langs, cache, sharding, builders/embeds, HTTP or gateway/worker clients, prefix commands, Slipher packages, @slipher/testing, yunaforseyfert, seyfert.config files, or imports from the `seyfert` package.
+description: Deep Seyfert v5 guidance for building, updating, debugging, reviewing, and testing Discord bots that use the Seyfert TypeScript framework. Use when a task mentions Seyfert, imports from the `seyfert` package, `seyfert.config` files, Seyfert class/decorator APIs (`Command`, `Declare`, `Options`, `ComponentCommand`, `createEvent`, `createPlugin`), Slipher packages, @slipher/testing, or yunaforseyfert.
 ---
 
 # Seyfert (v5)
 
 ## Overview
 
-Source-aware guidance for Seyfert v5 Discord bots and for the Seyfert framework itself. The public docs are a good workflow map, but **the installed `seyfert` package — or the local `seyfert-core` source — is the source of truth** whenever names, signatures, exports, or behavior conflict. The references in this skill were re-verified against `seyfert-core` on the `more-qol` branch (newer than docs/`5.0.0`); `references/source-truth.md` lists the exact doc-vs-source corrections.
+Source-aware guidance for Seyfert v5 Discord bots and for the Seyfert framework itself. The public docs are a good workflow map, but **the source of truth** whenever names, signatures, exports, or behavior conflict is the target project's installed `node_modules/seyfert`, the current HEAD of a Seyfert source checkout when working on the framework, or Seyfert source explicitly provided by the user. `references/source-truth.md` lists the doc-vs-source corrections to re-check against that authority.
 
 ## Source Of Truth (read this order)
 
 1. **Inspect the project first:** `package.json` + lockfile (confirm the installed `seyfert` version and any `@slipher/*`, `yunaforseyfert`, lavalink deps), `seyfert.config.*`, `tsconfig.json`, the command/component/event/lang folders, module augmentations (`declare module 'seyfert'`), and existing tests.
 2. **Prefer root imports from `seyfert`.** Use a deep import only for an API not root-exported in the installed version — known case: custom prefix parsers via `seyfert/lib/commands/handle` (`HandleCommand`). Before adding a deep import, check `lib/index.d.ts` / `src/index.ts` / the barrels.
-3. **Verify core APIs against installed `seyfert` (or this repo's `src/**`) before copying any docs example.** Docs can be ahead of (or behind) the installed build.
+3. **Verify core APIs against the target project's installed `node_modules/seyfert`, the current Seyfert source checkout, or source explicitly provided by the user before copying any docs example.** Docs can be ahead of (or behind) the installed build.
 4. **External packages** (`@slipher/cooldown|scheduler|logger|queues|chartjs`, `@slipher/testing`, `yunaforseyfert`, lavalink clients) are doc-authoritative but **NOT** in `seyfert-core` — verify availability and version in the target project.
 
 `references/source-truth.md` holds the curated, source-cited corrections and local landmarks — **read it before trusting any docs example for a typed API.**

@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/plugins/building/creating-plugins
 Coverage reference: plugins.md
-Verification status: Source-verified (src/client/plugins.ts + src/client/plugins/{types,api,shared,order}.ts, branch more-qol)
+Verification status: Source-verified (src/client/plugins.ts + src/client/plugins/{types,api,shared,order}.ts, the authoritative Seyfert source)
 
 ## Page Summary
 

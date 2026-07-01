@@ -4,7 +4,7 @@ Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/
 
 Coverage reference: plugins.md
 
-Verification status: Source-verified (src/client/plugins.ts + plugins/{shared,api,types,registry}.ts, branch more-qol)
+Verification status: Source-verified (src/client/plugins.ts + plugins/{shared,api,types,registry}.ts, the authoritative Seyfert source)
 
 ## Page Summary
 

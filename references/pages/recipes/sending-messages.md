@@ -2,11 +2,11 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/recipes/sending-messages
 Coverage reference: builders.md (+ i18n-cache-recipes.md)
-Verification status: Source-verified (branch more-qol)
+Verification status: Source-verified (the authoritative Seyfert source)
 
 ## Page Summary
 
-Shows the main ways to emit messages in Seyfert v5: replying to a command with `ctx.write()`, deferring then editing with `ctx.deferReply()` + `ctx.editOrReply()`, sending a standalone message to a channel via `ctx.client.messages.write()`, and attaching embeds, components (buttons / select menus inside `ActionRow`), files, and polls. All builders and context methods used by the doc examples exist on the current `more-qol` branch and are exported from the `seyfert` root.
+Shows the main ways to emit messages in Seyfert v5: replying to a command with `ctx.write()`, deferring then editing with `ctx.deferReply()` + `ctx.editOrReply()`, sending a standalone message to a channel via `ctx.client.messages.write()`, and attaching embeds, components (buttons / select menus inside `ActionRow`), files, and polls. All builders and context methods used by the doc examples exist on the current verified source and are exported from the `seyfert` root.
 
 Key v5 behavior: `ctx.write()` / `ctx.editOrReply()` / `ctx.deferReply()` return `void` for interactions UNLESS you pass the response flag (`withResponse: true`), in which case interaction calls resolve to a `WebhookMessageStructure`. Prefix commands always return a `MessageStructure`.
 

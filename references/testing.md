@@ -48,7 +48,7 @@ export default defineConfig({ test: { fileParallelism: false, isolate: false } }
   `TextInput`, `TextInputStyle`, `Embed`, `PollBuilder`, `InteractionResponseType`, `SeyfertError`,
   `CacheFrom`, `ActivityType`, `GatewayOpcodes`, `PresenceUpdateStatus`, `definePlugins`.
 - Toolkit symbols + `TEST_*` ids come from **`'@slipher/testing'`**, never from `'seyfert'`.
-- **`Routes` is NOT a runtime value export of `seyfert`** (re-verified on `more-qol`:
+- **`Routes` is NOT a runtime value export of `seyfert`** (re-verified against the authoritative Seyfert source:
   `src/api/Routes/index.ts` declares only `interface APIRoutes` + route-type interfaces; `cdn.ts`
   exports only `interface CDNRoute` / `type UserAvatarDefault`; `grep` finds no `export const/function
   Routes`). The runtime route proxy is per-client `client.proxy` (`src/api/Router.ts`, getter at
@@ -397,7 +397,7 @@ import { middlewares } from '../src/middlewares';
 declare module 'seyfert' { interface SeyfertRegistry { middlewares: typeof middlewares } }
 ```
 
-## Gotchas (branch `more-qol`)
+## Gotchas (source-verified)
 
 - Middleware control flow uses **`stop()`**, not the removed `pass()` (commit 22eb832; arg is
   `{ context, next, stop }`; `stop()`/`stop(null)` skip silently → denial kind `'pass'`,

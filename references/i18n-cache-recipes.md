@@ -1,6 +1,6 @@
 # i18n, Cache, Structures, and Recipes
 
-Source-verified against `./src` (branch `more-qol`). Import policy: every symbol below is a **root `'seyfert'` export** UNLESS explicitly flagged "deep import" (`seyfert/lib/...`) or "external" (separate npm package). v5 module augmentation lives on **one** interface: `declare module 'seyfert' { interface SeyfertRegistry { client; middlewares; langs; plugins } }` — `UsingClient`/`RegisteredMiddlewares`/`DefaultLocale`/`RegisteredPlugins` are all derived. `ParseMiddlewares` is gone (use bare `typeof middlewares`).
+Source-verified against the target project installed `seyfert` package or provided Seyfert source. Import policy: every symbol below is a **root `'seyfert'` export** UNLESS explicitly flagged "deep import" (`seyfert/lib/...`) or "external" (separate npm package). v5 module augmentation lives on **one** interface: `declare module 'seyfert' { interface SeyfertRegistry { client; middlewares; langs; plugins } }` — `UsingClient`/`RegisteredMiddlewares`/`DefaultLocale`/`RegisteredPlugins` are all derived. `ParseMiddlewares` is gone (use bare `typeof middlewares`).
 
 ---
 
@@ -182,7 +182,9 @@ export default class extends Command {
 - `client.cache.testAdapter()` **throws `SeyfertError`** (not boolean) on the first mismatch; needs `users`+`members`+`channels`+`overwrites` enabled.
 - `LimitedCollection<K,V>` (`src/collection.ts`) is a standalone TTL/limit map: `set(key, val, ttlMs?)`, defaults `limit=Infinity, expire=0 (never), resetOnDemand=false`; `values()/entries()` yield plain data, `rawValues()/rawEntries()` carry metadata; throws on a `NaN` limit.
 
-### Custom resource (subclass + augment)
+### Custom resource (subclass + Cache augmentation)
+
+`Cache` is a runtime class, not a `SeyfertRegistry` key. For manually attached resources, augment `interface Cache` so TypeScript can see the property; for plugin-owned resources prefer `api.cache.resource(...)` and cast or augment where application code reads the dynamic resource.
 
 ```ts
 import { BaseResource, GuildBasedResource, CacheFrom, Client, type ParseClient } from 'seyfert';
@@ -212,7 +214,7 @@ declare module 'seyfert' {
 }
 ```
 
-Manual `client.cache.x = ...` works but is cleared when `buildCache` re-runs (e.g. on `setServices({ cache })`). Prefer a plugin's `cacheResources` contribution — it survives rebuilds.
+Manual `client.cache.x = ...` works but is cleared when `buildCache` re-runs (e.g. on `setServices({ cache })`). Prefer a plugin's `api.cache.resource(...)` contribution — it survives rebuilds and can add required gateway intents.
 
 ---
 
@@ -477,7 +479,7 @@ declare module 'seyfert' {
 - Runtime strings via `ctx.t.path.get()`; function leaves CALLED then `.get()`? Metadata via `@LocalesT`/`@Locales`/`@GroupsT`/`defineGroups`/option `locales` (object) / choice `locales` (string)?
 - Langs/cache config via `client.setServices({...})` (NOT the constructor for langs)?
 - Cache: resource access null-checked? `set`/`patch` passing `CacheFrom` FIRST? `disabledCache` form correct (bool/object/predicate)? `bans` keyed with `guildId`? `asyncCache` augmented for Redis/Worker?
-- Custom resource: manual/plugin registration AND `Cache` augmentation? Custom structure: both `Transformers.X` AND `CustomStructures` (subclass to keep built-ins)?
+- Custom resource: manual `interface Cache` augmentation or access-site cast? Plugin resource registered via `api.cache.resource(...)`? Custom structure: both `Transformers.X` AND `CustomStructures` (subclass to keep built-ins)?
 - DB plugin: connection in `setup`/`teardown` (not `register`); async `ctx` helper returns a function?
 - Imports from root `'seyfert'` except `LogLevels`/`LoggerOptions` → `seyfert/lib/common`, and type-only `seyfert/lib/types`? External packages (yuna, kazagumo, redis) version-verified?
 - v5 hygiene: lowercase option keys; readonly `choices`/`channel_types` as `as const`; `timeout` in ms; `ban({ deleteMessageSeconds, reason })`; `stop()`/`stop('reason')` not `pass()`; no `isSendable()`; `PermissionsBitField.resolve` throws on bad input?

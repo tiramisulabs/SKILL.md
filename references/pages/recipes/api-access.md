@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/recipes/api-access
 Coverage reference: i18n-cache-recipes.md
-Verification status: Source-verified (branch more-qol)
+Verification status: Source-verified (the authoritative Seyfert source)
 
 ## Page Summary
 

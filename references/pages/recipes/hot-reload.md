@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/recipes/hot-reload
 Coverage reference: setup-runtime.md
-Verification status: Source-verified (core, branch more-qol) + external package (@slipher/watcher)
+Verification status: Source-verified (core, the authoritative Seyfert source) + external package (@slipher/watcher)
 
 ## Page Summary
 

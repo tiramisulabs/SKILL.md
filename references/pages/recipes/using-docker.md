@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/recipes/using-docker
 Coverage reference: setup-runtime.md
-Verification status: Source-verified (core) — Dockerfile is plain ops; all Seyfert touchpoints confirmed against ./src on branch more-qol.
+Verification status: Source-verified (core) — Dockerfile is plain ops; all Seyfert touchpoints confirmed against the target project installed `seyfert` package or provided Seyfert source.
 
 ## Page Summary
 

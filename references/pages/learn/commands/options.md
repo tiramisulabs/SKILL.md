@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/learn/commands/options
 Coverage reference: commands.md
-Verification status: Source-verified against ./src (branch more-qol), cross-checked vs v5 changelog
+Verification status: Source-verified against ./src (the authoritative Seyfert source), cross-checked vs v5 changelog
 
 ## Page Summary
 

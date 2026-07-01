@@ -1,6 +1,6 @@
 # Commands (Seyfert v5)
 
-Source-verified against `./src` (branch more-qol). Commands are class-based + decorator-configured. Everything imports from the **root `'seyfert'`** unless a deep import is explicitly called out.
+Source-verified against the target project installed `seyfert` package or provided Seyfert source. Commands are class-based + decorator-configured. Everything imports from the **root `'seyfert'`** unless a deep import is explicitly called out.
 
 ## Classes
 

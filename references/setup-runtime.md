@@ -1,11 +1,11 @@
 # Setup & Runtime
 
-Source-verified against `./src` (branch `more-qol`, `seyfert@5.0.0`). Covers config, the three clients, `start()`, `uploadCommands()`, `setServices`, intents, events, sharding/workers, presence, plugins, logger, and module augmentation — with copy-paste recipes.
+Source-verified against the target project installed `seyfert` package or provided Seyfert source (`seyfert@5.0.0` where applicable). Covers config, the three clients, `start()`, `uploadCommands()`, `setServices`, intents, events, sharding/workers, presence, plugins, logger, and module augmentation — with copy-paste recipes.
 
 ## Import policy
 
-Everything for setup imports from the package root `'seyfert'`. No deep `'seyfert/lib/...'` imports are needed for setup.
-Root barrel (`src/index.ts`) exports: `Client`, `HttpClient`, `WorkerClient`, `config`, `createEvent`, `extendContext`, `createPlugin`, `definePlugins`, `ShardManager`, `WorkerManager`, `WorkerAdapter`, `Logger`, `LogLevels`, `GatewayIntentBits`, `ActivityType`, `PresenceUpdateStatus`, `SeyfertError`, plus types `ParseClient`, `ParseLocales`, `ParseGlobalMiddlewares`, `UsingClient`, `ShardData`, `ShardManagerOptions`, `WorkerData`, `WorkerManagerOptions`, `WorkerInfo`, `WorkerShardInfo`, `BotConfig`, `HttpConfig`. Deep-import only internals like `GatewayIntentInput`/`resolveGatewayIntents` (`seyfert/lib/client/intents`).
+Most setup imports come from the package root `'seyfert'`. Use deep imports only for APIs not root-exported in the installed package.
+Root barrel (`src/index.ts`) exports: `Client`, `HttpClient`, `WorkerClient`, `config`, `createEvent`, `extendContext`, `createPlugin`, `definePlugins`, `ShardManager`, `WorkerManager`, `WorkerAdapter`, `Logger`, `GatewayIntentBits`, `ActivityType`, `PresenceUpdateStatus`, `SeyfertError`, plus types `ParseClient`, `ParseLocales`, `ParseGlobalMiddlewares`, `UsingClient`, `ShardData`, `ShardManagerOptions`, `WorkerData`, `WorkerManagerOptions`, `WorkerInfo`, `WorkerShardInfo`, `BotConfig`, `HttpConfig`. Deep-import `LogLevels`/`LoggerOptions` from `seyfert/lib/common`, and internals like `GatewayIntentInput`/`resolveGatewayIntents` from `seyfert/lib/client/intents`.
 
 ## tsconfig (decorators are mandatory)
 
@@ -278,7 +278,7 @@ declare module 'seyfert' {
 - `SeyfertRegistry` UNIFIES `client`/`middlewares`/`langs`/`plugins` (`src/client/plugins/types.ts:32`). `UsingClient`, `RegisteredMiddlewares`, `DefaultLocale` are DERIVED — do NOT augment them directly (the v4 / early-v5 `interface UsingClient extends ...` pattern silently fails to merge).
 - `ParseMiddlewares` is GONE — register the bare `typeof middlewares` (`createMiddleware` already returns the right shape).
 - ALWAYS brand the client with `ParseClient<...>`; a bare `Client<true>` won't resolve `UsingClient` (it falls back to `BaseClient`).
-- Still-separate augmentable interfaces: `GlobalMetadata`, `ExtendContext`, `ExtraProps`, `InternalOptions`, `ExtendedRC` / `ExtendedRCLocations`, `CustomEvents`, `CustomStructures`. (`Cache` is a runtime class, not augmentable.)
+- Still-separate augmentable interfaces: `GlobalMetadata`, `ExtendContext`, `ExtraProps`, `InternalOptions`, `ExtendedRC` / `ExtendedRCLocations`, `CustomEvents`, `CustomStructures`. `Cache` is a runtime class, not a `SeyfertRegistry` key; add an explicit `interface Cache { ... }` augmentation or use an access-site cast for custom cache resources.
 
 ```ts
 declare module 'seyfert' {
@@ -472,6 +472,7 @@ Emit ESM (`module: "ESNext"`). Set secrets with `wrangler secret put`. `uploadCo
 
 - `start()` never uploads commands — call `uploadCommands()` separately (commonly in `botReady`); use `cachePath` to skip unchanged uploads. Avoid uploading on every boot in prod (rate limits).
 - Augment `SeyfertRegistry`, never `UsingClient`/`RegisteredMiddlewares`/`DefaultLocale` (derived). Always brand with `ParseClient<...>`. `ParseMiddlewares` removed.
+- `Logger` is root-exported, but `LogLevels` is not; import it from `seyfert/lib/common`.
 - `mode: 'clusters'` is PLURAL. `path` required for `threads`/`clusters`; `adapter` required for `custom`.
 - `handleCommand` in `setServices` takes the CLASS, not an instance.
 - `client.gateway` exists only on gateway `Client` (undefined on `WorkerClient`, absent on `HttpClient`). Presence/runtime shard APIs live there.

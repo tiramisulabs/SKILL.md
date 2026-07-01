@@ -16,7 +16,7 @@ Always verify the exact `@slipher/logger` API against the version installed in t
 
 ## Key APIs (verified)
 
-Core Seyfert APIs the docs lean on (all confirmed in ./src, branch more-qol):
+Core Seyfert APIs the docs lean on (all confirmed in ./src, the authoritative Seyfert source):
 
 - `definePlugins(...plugins)` / `definePlugins(plugins[])` — both overloads exist; returns the tuple as-is (`src/client/plugins.ts:283-289`). Root import from `'seyfert'`.
 - `createPlugin({ name, ctx, client, middlewares, register, setup, teardown, ... })` — the plugin shape; the `ctx` map `(interaction, client) => value` is what a plugin uses to inject per-interaction fields like `logger` (`src/client/plugins.ts:240-265`; `PluginContextMap` at `src/client/plugins/types.ts:250-256`). `ctx` values become typed context properties via the registry.

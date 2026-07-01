@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/learn/commands/middlewares
 Coverage reference: commands.md
-Verification status: Source-verified (v5, branch more-qol)
+Verification status: Source-verified (v5, the authoritative Seyfert source)
 
 ## Page Summary
 

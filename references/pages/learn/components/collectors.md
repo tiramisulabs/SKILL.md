@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/learn/components/collectors
 Coverage reference: components.md (+ builders.md)
-Verification status: Source-verified (branch more-qol). No v5 deltas needed — message collector API is unchanged from the doc; this note only ADDS source-confirmed detail and recipes the MDX omits.
+Verification status: Source-verified (the authoritative Seyfert source). No v5 deltas needed — message collector API is unchanged from the doc; this note only ADDS source-confirmed detail and recipes the MDX omits.
 
 ## Page Summary
 

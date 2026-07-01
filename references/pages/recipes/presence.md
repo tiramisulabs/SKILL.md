@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/recipes/presence
 Coverage reference: setup-runtime.md
-Verification status: Source-verified (branch more-qol)
+Verification status: Source-verified (the authoritative Seyfert source)
 
 ## Page Summary
 

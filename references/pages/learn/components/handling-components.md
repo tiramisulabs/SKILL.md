@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/learn/components/handling-components
 Coverage reference: components.md (+ builders.md)
-Verification status: Source-verified (v5, branch more-qol) — no v5/v4 errors found in prior note; expanded with recipes.
+Verification status: Source-verified (v5, the authoritative Seyfert source) — no v5/v4 errors found in prior note; expanded with recipes.
 
 ## Page Summary
 

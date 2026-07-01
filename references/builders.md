@@ -1,6 +1,6 @@
 # Builders (Embed, Components, Modal, Attachments, Poll, Formatter)
 
-Source of truth: `src/builders/**`, `src/common/it/formatter.ts`. Verified against branch `more-qol`.
+Source of truth: `src/builders/**`, `src/common/it/formatter.ts`. Verified against the authoritative Seyfert source.
 
 ## Import policy
 

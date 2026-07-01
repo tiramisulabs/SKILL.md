@@ -2,13 +2,13 @@
 
 ## Provenance
 
-This skill was built and re-verified from three inputs:
+This skill was built from three inputs:
 
 - Rendered Vercel docs at `https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/...`.
 - The raw docs MDX from `tiramisulabs/seyfert-web` branch `seyfert-v5` (`content/docs/**.mdx`) — faithful code examples, fetched per page.
-- The local `seyfert-core` source at `C:\Users\Admin\Desktop\projects\ts\seyfert-core`, branch **`more-qol`** (newer than the published `seyfert@5.0.0` and the docs' dev build).
+- Authoritative Seyfert source, chosen per task: the target project's installed `node_modules/seyfert`, the current HEAD of a Seyfert source checkout when working on the framework, or Seyfert source explicitly provided by the user.
 
-For **core** APIs, local source / the installed package wins over docs. For **external** packages (`@slipher/*`, `yunaforseyfert`, lavalink, `@slipher/testing`), verify the actual installed package before using docs-only APIs.
+For **core** APIs, that authoritative source wins over docs. For **external** packages (`@slipher/*`, `yunaforseyfert`, lavalink, `@slipher/testing`), verify the actual installed package before using docs-only APIs.
 
 ## How To Use This File
 
@@ -16,7 +16,7 @@ For **core** APIs, local source / the installed package wins over docs. For **ex
 
 ## Local Source Landmarks
 
-Resolve conflicts from these files (branch `more-qol`):
+Resolve conflicts from these files in the installed package, current Seyfert source checkout, or source explicitly provided by the user:
 
 - Root exports / helpers: `src/index.ts` — re-exports client/api/builders/cache/commands/components/events/langs/structures/types and defines `createEvent`, `config.bot`, `config.http`, `extendContext`.
 - Clients: `src/client/{base,client,httpclient,workerclient,index,intents,types,transformers,collectors}.ts`.
@@ -49,10 +49,10 @@ Apply these unless the *installed* version proves otherwise.
   (`SeyfertRegistry` declared at `client/plugins/types.ts:32`, resolved in `shared.ts:30`.)
 - **`ParseMiddlewares` no longer exists** — register the middlewares object type directly (the `middlewares` field is constrained to `Record<string, AnyMiddlewareContext>`). `ParseGlobalMiddlewares<typeof globalMiddlewares>` *does* still exist for augmenting `GlobalMetadata`.
 - Registered client types are preserved via a `ParseClient` brand: `ParseClient<T> = T & { readonly [__seyfertClientType]?: T }` (`shared.ts:29,48`). Forgetting the `SeyfertRegistry.client` augmentation degrades typing to `BaseClient`.
-- Still-separate augmentable **interfaces**: `GlobalMetadata`, `ExtendContext`, `ExtraProps`, `InternalOptions` (`withPrefix`, `asyncCache`), `ExtendedRC`/`ExtendedRCLocations`, `CustomEvents`, `CustomStructures`. `Cache` is a runtime **class**, not augmentable.
+- Still-separate augmentable **interfaces**: `GlobalMetadata`, `ExtendContext`, `ExtraProps`, `InternalOptions` (`withPrefix`, `asyncCache`), `ExtendedRC`/`ExtendedRCLocations`, `CustomEvents`, `CustomStructures`. `Cache` is a runtime **class**, not a `SeyfertRegistry` key; type custom cache resources with an explicit `interface Cache { ... }` augmentation or a local cast at the access site.
 
 ### Middleware
-- The callback arg is `{ context, next, stop }` — **there is no `pass`** (`shared.ts:55` `MiddlewareContext`; `StopFunction = (error?: string | null) => void`). Removed on `more-qol` (commit `22eb832` "replace middleware pass() with stop()").
+- The callback arg is `{ context, next, stop }` — **there is no `pass`** (`shared.ts:55` `MiddlewareContext`; `StopFunction = (error?: string | null) => void`). Removed before the current verified source (commit `22eb832` "replace middleware pass() with stop()").
 - `stop("reason")` denies → routes to `onMiddlewaresError`. `stop()` / `stop(null)` **silently skips** (no run, no error) — this is the old `pass()`. `next(data)` attaches typed metadata read via `ctx.metadata.<name>`.
 - A middleware that **throws** (sync) or returns a **rejected promise** (async) rejects the runner → `onInternalError` (with the thrown error) — it is an internal error, NOT a denial, and the runner does not log it. Only `stop('reason')` is a denial. (Earlier a sync throw → `onInternalError` but an async rejection diverged to `onMiddlewaresError`; now unified. `chat.ts` `__runMiddlewares`.)
 
@@ -74,6 +74,7 @@ Apply these unless the *installed* version proves otherwise.
 - `start()` does **not** upload commands; `client.uploadCommands(...)` is separate (`base.ts`).
 - `seyfert.config` resolves `.js/.mjs/.cjs/.ts/.mts/.cts` from `process.cwd()` (not only `.mjs`). `config.http` requires `publicKey` **and** `applicationId`, omits `events` from `locations`, and defaults `port` to `8080`; `config.bot` has no default port. A client option `getRC` can bypass file-based config.
 - `RuntimeConfig.locations` only requires `base`; `commands`/`langs`/`events`/`components` are optional.
+- `Logger` is root-exported, but `LogLevels`, `LoggerOptions`, and logger callback types come from `seyfert/lib/common` in the current root barrel. Do not import `LogLevels` from root unless the installed package proves it is exported there.
 
 ### Events
 - Event `run` return type is **`Awaitable<unknown>`** (widened from `Awaitable<void>`; `createEvent` `src/index.ts:70`, `ClientEvent` `events/event.ts:32`, `EventValues` `events/handler.ts:49`), so handlers may `return` a value. `CallbackEventHandler` was already `=> unknown`. Landed in dev builds ≥ `28477111245` (older builds/docs still say `void`).

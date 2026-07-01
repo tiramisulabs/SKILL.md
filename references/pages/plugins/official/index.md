@@ -196,7 +196,7 @@ const presencePlugin = createPlugin({
 ## Doc vs Source Corrections
 
 - Catalog grouping fixed to match current MDX (ref seyfert-v5): `yunaforseyfert` is listed under **Plugins** (with a `/yuna` guide link), not Utilities. Utilities are now `@slipher/webhooks`, `@slipher/watcher`, `@slipher/testing`, `@slipher/chartjs`.
-- All core integration APIs and line anchors re-verified against `./src` on branch more-qol — no stale/v4 signatures found. `createPlugin` runtime is `return plugin` (240-265); `createPluginFactory` wraps throws via `wrapPluginError` (267-281); `definePlugins` accepts spread-or-array (283-289).
+- All core integration APIs and line anchors re-verified against `./src` on the authoritative Seyfert source — no stale/v4 signatures found. `createPlugin` runtime is `return plugin` (240-265); `createPluginFactory` wraps throws via `wrapPluginError` (267-281); `definePlugins` accepts spread-or-array (283-289).
 - `SeyfertRegistry` starts as empty `interface SeyfertRegistry {}` (types.ts:32) and is the single augmentation point in v5 (replaces v4 `UsingClient`/`RegisteredMiddlewares`/`DefaultLocale`, which are now derived).
 - MDX descriptions of the `@slipher` packages cannot be verified against seyfert-core (none are vendored); treated as doc-authoritative — verify versions/exports in the consuming project.
 

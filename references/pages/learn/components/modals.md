@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/learn/components/modals
 Coverage reference: components.md (+ builders.md)
-Verification status: Source-verified against ./src (branch more-qol)
+Verification status: Source-verified against ./src (the authoritative Seyfert source)
 
 ## Page Summary
 

@@ -236,7 +236,7 @@ expect(result.reply?.body.data).toMatchObject({ content: 'Pong!' });
 
 ## Doc vs Source Corrections
 
-- None for the core APIs. `CacheFrom.Test`, `GuildMember.voice()`, `BaseCommandInteraction.guild()/channel()` (with `GuildCommandContext` narrowing), `client.cache.roles.values()`, `client.cache.voiceStates.values()`, and `client.channels.fetchMessages()` all exist and behave as the docs describe (verified against ./src on branch more-qol). The entire toolkit surface (`mockWorld`, `createMockBot`, builders, readers, `snapshot`/`diff`, `apiRole`, `permissionBits`, `apiError`, `Routes`, `setData`/`worldData`) lives in the EXTERNAL `@slipher/testing` package and could not be verified against seyfert-core — verify its version/signatures in the target project.
+- None for the core APIs. `CacheFrom.Test`, `GuildMember.voice()`, `BaseCommandInteraction.guild()/channel()` (with `GuildCommandContext` narrowing), `client.cache.roles.values()`, `client.cache.voiceStates.values()`, and `client.channels.fetchMessages()` all exist and behave as the docs describe (verified against the target project installed `seyfert` package or provided Seyfert source). The entire toolkit surface (`mockWorld`, `createMockBot`, builders, readers, `snapshot`/`diff`, `apiRole`, `permissionBits`, `apiError`, `Routes`, `setData`/`worldData`) lives in the EXTERNAL `@slipher/testing` package and could not be verified against seyfert-core — verify its version/signatures in the target project.
 - Note for v5: `member.ban(...)` / `client.members.ban(...)` now take `{ deleteMessageSeconds, reason }` (camelCase, reason inside the object) — reflected in the ban recipe above (changelog: Moderation breaking change).
 
 ## Source Anchors

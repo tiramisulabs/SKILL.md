@@ -1,6 +1,6 @@
 # Link Verification Matrix
 
-Audit of every supplied docs URL: each was fetched as raw MDX from `tiramisulabs/seyfert-web@seyfert-v5` (`content/docs/<slug>.mdx`) and verified against `seyfert-core` `src/**` on branch `more-qol`. Page notes carry the per-URL source anchors and the explicit doc-vs-source corrections; cross-cutting corrections are in `source-truth.md`.
+Audit of every supplied docs URL: each was fetched as raw MDX from `tiramisulabs/seyfert-web@seyfert-v5` (`content/docs/<slug>.mdx`). Page notes carry the per-URL source anchors and explicit doc-vs-source corrections; resolve API conflicts against the authoritative Seyfert source defined in `source-truth.md`.
 
 | # | Docs URL | Page note | Topic ref | Verification |
 |---|---|---|---|---|
