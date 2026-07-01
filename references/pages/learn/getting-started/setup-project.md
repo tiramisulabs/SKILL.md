@@ -176,8 +176,7 @@ client.start();
 
 Configure the logger inline (now honored on worker clients too):
 ```ts
-import { Client } from 'seyfert';
-import { LogLevels } from 'seyfert/lib/common';
+import { Client, LogLevels } from 'seyfert';
 
 // LoggerOptions: { active?, logLevel?, name?, saveOnFile? }
 const client = new Client({ logger: { active: true, logLevel: LogLevels.Debug } });

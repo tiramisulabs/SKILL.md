@@ -312,8 +312,7 @@ export default class extends Command {
 `client.logger` is a `Logger` named `'[Seyfert]'`. Use `client.logger.{debug,info,warn,error,fatal}` — don't construct a new one for app logging.
 
 ```ts
-import { Client, Logger } from 'seyfert';
-import { LogLevels } from 'seyfert/lib/common'; // DEEP IMPORT — LogLevels is NOT on the root
+import { Client, Logger, LogLevels } from 'seyfert';
 
 // Configure at construction (v5; honored on Worker/Http clients too)
 const client = new Client({ logger: {
@@ -335,7 +334,7 @@ Logger.prototype.success = function (...a: unknown[]) { this.rawLog(LogLevels.In
 declare module 'seyfert' { interface Logger { success(...a: unknown[]): void } }
 ```
 
-- `Logger` IS root-exported; `LogLevels`, `LoggerOptions`, callback types are **deep imports** (`seyfert/lib/common`).
+- `Logger`, `LogLevels`, `LoggerOptions`, and the logger callback types are all **root exports** of `seyfert`.
 - Static (process-wide): `Logger.saveOnFile = 'all' | string[]`, `Logger.dirname` (default `'seyfert-logs'`), `Logger.customizeFilename(cb)`, `Logger.clearLogs()`. Per-instance file logging = the boolean `logger.saveOnFile`. Files are color-stripped; console keeps ANSI.
 - Logs below `logger.level` or when `active === false` are silently dropped — lower `logLevel` to see `Debug`.
 
@@ -481,6 +480,6 @@ declare module 'seyfert' {
 - Cache: resource access null-checked? `set`/`patch` passing `CacheFrom` FIRST? `disabledCache` form correct (bool/object/predicate)? `bans` keyed with `guildId`? `asyncCache` augmented for Redis/Worker?
 - Custom resource: manual `interface Cache` augmentation or access-site cast? Plugin resource registered via `api.cache.resource(...)`? Custom structure: both `Transformers.X` AND `CustomStructures` (subclass to keep built-ins)?
 - DB plugin: connection in `setup`/`teardown` (not `register`); async `ctx` helper returns a function?
-- Imports from root `'seyfert'` except `LogLevels`/`LoggerOptions` → `seyfert/lib/common`, and type-only `seyfert/lib/types`? External packages (yuna, kazagumo, redis) version-verified?
+- Imports from root `'seyfert'` (including `LogLevels`/`LoggerOptions`), except type-only `seyfert/lib/types`? External packages (yuna, kazagumo, redis) version-verified?
 - v5 hygiene: lowercase option keys; readonly `choices`/`channel_types` as `as const`; `timeout` in ms; `ban({ deleteMessageSeconds, reason })`; `stop()`/`stop('reason')` not `pass()`; no `isSendable()`; `PermissionsBitField.resolve` throws on bad input?
 - `reload`/`reloadAll` avoided under Cloudflare Workers? Monetization gated by `skuId` (+ `endsAtTimestamp`/`deleted`), SKUs configured in the portal?

@@ -5,7 +5,7 @@ Source-verified against the target project installed `seyfert` package or provid
 ## Import policy
 
 Most setup imports come from the package root `'seyfert'`. Use deep imports only for APIs not root-exported in the installed package.
-Root barrel (`src/index.ts`) exports: `Client`, `HttpClient`, `WorkerClient`, `config`, `createEvent`, `extendContext`, `createPlugin`, `definePlugins`, `ShardManager`, `WorkerManager`, `WorkerAdapter`, `Logger`, `GatewayIntentBits`, `ActivityType`, `PresenceUpdateStatus`, `SeyfertError`, plus types `ParseClient`, `ParseLocales`, `ParseGlobalMiddlewares`, `UsingClient`, `ShardData`, `ShardManagerOptions`, `WorkerData`, `WorkerManagerOptions`, `WorkerInfo`, `WorkerShardInfo`, `BotConfig`, `HttpConfig`. Deep-import `LogLevels`/`LoggerOptions` from `seyfert/lib/common`, and internals like `GatewayIntentInput`/`resolveGatewayIntents` from `seyfert/lib/client/intents`.
+Root barrel (`src/index.ts`) exports: `Client`, `HttpClient`, `WorkerClient`, `config`, `createEvent`, `extendContext`, `createPlugin`, `definePlugins`, `ShardManager`, `WorkerManager`, `WorkerAdapter`, `Logger`, `LogLevels`, `GatewayIntentBits`, `ActivityType`, `PresenceUpdateStatus`, `SeyfertError`, plus types `ParseClient`, `ParseLocales`, `ParseGlobalMiddlewares`, `UsingClient`, `ShardData`, `ShardManagerOptions`, `WorkerData`, `WorkerManagerOptions`, `WorkerInfo`, `WorkerShardInfo`, `BotConfig`, `HttpConfig`. The logger surface (`LogLevels`, `LoggerOptions`, `CustomizeLoggerCallback`, `AssignFilenameCallback`) is root-exported too. Deep-import only internals like `GatewayIntentInput`/`resolveGatewayIntents` from `seyfert/lib/client/intents`.
 
 ## tsconfig (decorators are mandatory)
 
@@ -405,8 +405,7 @@ Plugin input fields (`src/client/plugins/types.ts:498-511`): `name`, `client`, `
 ## Recipe: extendContext + custom logger
 
 ```ts
-import { Client, extendContext } from 'seyfert';
-import { LogLevels } from 'seyfert/lib/common';
+import { Client, extendContext, LogLevels } from 'seyfert';
 
 const context = extendContext(interaction => ({
   isOwner: interaction.user.id === process.env.OWNER_ID,
@@ -472,7 +471,7 @@ Emit ESM (`module: "ESNext"`). Set secrets with `wrangler secret put`. `uploadCo
 
 - `start()` never uploads commands — call `uploadCommands()` separately (commonly in `botReady`); use `cachePath` to skip unchanged uploads. Avoid uploading on every boot in prod (rate limits).
 - Augment `SeyfertRegistry`, never `UsingClient`/`RegisteredMiddlewares`/`DefaultLocale` (derived). Always brand with `ParseClient<...>`. `ParseMiddlewares` removed.
-- `Logger` is root-exported, but `LogLevels` is not; import it from `seyfert/lib/common`.
+- `Logger`, `LogLevels`, `LoggerOptions`, and the logger callback types are all root exports of `seyfert`.
 - `mode: 'clusters'` is PLURAL. `path` required for `threads`/`clusters`; `adapter` required for `custom`.
 - `handleCommand` in `setServices` takes the CLASS, not an instance.
 - `client.gateway` exists only on gateway `Client` (undefined on `WorkerClient`, absent on `HttpClient`). Presence/runtime shard APIs live there.

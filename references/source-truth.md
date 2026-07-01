@@ -78,7 +78,7 @@ Apply these unless the *installed* version proves otherwise.
 - `start()` does **not** upload commands; `client.uploadCommands(...)` is separate (`base.ts`).
 - `seyfert.config` resolves `.js/.mjs/.cjs/.ts/.mts/.cts` from `process.cwd()` (not only `.mjs`). `config.http` requires `publicKey` **and** `applicationId`, omits `events` from `locations`, and defaults `port` to `8080`; `config.bot` has no default port. A client option `getRC` can bypass file-based config.
 - `RuntimeConfig.locations` only requires `base`; `commands`/`langs`/`events`/`components` are optional.
-- `Logger` is root-exported, but `LogLevels`, `LoggerOptions`, and logger callback types come from `seyfert/lib/common` in the current root barrel. Do not import `LogLevels` from root unless the installed package proves it is exported there.
+- `Logger`, `LogLevels`, `LoggerOptions`, `CustomizeLoggerCallback`, and `AssignFilenameCallback` are all root exports of `seyfert` (`src/index.ts` re-exports them from `./common`). Published builds predating the logger-export fix only expose the non-`Logger` names via `seyfert/lib/common` — prefer the root import; fall back to the deep path only if the installed version proves it lacks them.
 
 ### Events
 - Event `run` return type is **`Awaitable<unknown>`** (widened from `Awaitable<void>`; `createEvent` `src/index.ts:70`, `ClientEvent` `events/event.ts:32`, `EventValues` `events/handler.ts:49`), so handlers may `return` a value. `CallbackEventHandler` was already `=> unknown`. Landed in dev builds ≥ `28477111245` (older builds/docs still say `void`).

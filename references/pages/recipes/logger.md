@@ -12,8 +12,8 @@ Seyfert ships a built-in `Logger` class (`src/common/it/logger.ts`) used interna
 
 All from `src/common/it/logger.ts` unless noted.
 
-- `class Logger` — root export from `'seyfert'` (`src/index.ts:29` re-exports it via `./common`).
-- `enum LogLevels { Debug=0, Info=1, Warn=2, Error=3, Fatal=4 }` — NOT re-exported from `'seyfert'` root; import via deep path `seyfert/lib/common` (it lives in the `src/common/index.ts:7` barrel only).
+- `class Logger` — root export from `'seyfert'` (`src/index.ts` re-exports it via `./common`).
+- `enum LogLevels { Debug=0, Info=1, Warn=2, Error=3, Fatal=4 }` — root export from `'seyfert'` (`src/index.ts` re-exports it from `./common`, alongside `Logger`).
 - `new Logger(options: LoggerOptions)` — constructor REQUIRES an options object (no empty constructor). `LoggerOptions = { logLevel?: LogLevels; name?: string; active?: boolean; saveOnFile?: boolean }`. Options are merged over `Logger.DEFAULT_OPTIONS` via `MergeOptions`.
 - Instance methods: `debug`, `info`, `warn`, `error`, `fatal` `(...args: any[])` and `rawLog(level: LogLevels, ...args: unknown[])`.
 - Instance accessors: `level` (get/set `LogLevels`), `name` (get/set string), `active` (get/set boolean), `saveOnFile` (get/set boolean, per-instance), and `readonly options: Required<LoggerOptions>`.
@@ -59,11 +59,10 @@ Logger.dirname = 'logs';              // default is 'seyfert-logs'
 
 ### 3. Custom methods via prototype extension
 
-Note the deep import for `LogLevels` — it is not on the `'seyfert'` root:
+`LogLevels` imports from the `'seyfert'` root alongside `Logger`:
 
 ```ts
-import { Logger } from 'seyfert';
-import { LogLevels } from 'seyfert/lib/common';
+import { Logger, LogLevels } from 'seyfert';
 
 Logger.prototype.success = function (...args: unknown[]) {
     this.rawLog(LogLevels.Info, ...args);
@@ -94,8 +93,7 @@ export default createEvent({
 In v5 you set the level/name/file flags directly when building the `Client` — no need to mutate `client.logger` after the fact. Set `logLevel` to surface `Debug` lines:
 
 ```ts
-import { Client } from 'seyfert';
-import { LogLevels } from 'seyfert/lib/common';
+import { Client, LogLevels } from 'seyfert';
 
 const client = new Client({
     logger: {
@@ -114,7 +112,7 @@ The same `logger` option is honored by `WorkerClient` and `HttpClient`.
 `level` and `active` are live accessors — flip them from a command, a SIGHUP handler, etc.:
 
 ```ts
-import { LogLevels } from 'seyfert/lib/common';
+import { LogLevels } from 'seyfert';
 
 // Crank up detail while debugging an incident:
 client.logger.level = LogLevels.Debug;
@@ -129,8 +127,7 @@ client.logger.active = false;
 Most app logging should reuse `client.logger`, but a standalone module (worker pool, scheduler, payment gateway) can own a named instance:
 
 ```ts
-import { Logger } from 'seyfert';
-import { LogLevels } from 'seyfert/lib/common';
+import { Logger, LogLevels } from 'seyfert';
 
 export const dbLogger = new Logger({
     name: '[DB]',
@@ -222,7 +219,7 @@ export default class MyCommand extends Command {
 ## Common patterns / gotchas
 
 - **Reuse `client.logger`.** Inside commands/events/components reach for `ctx.client.logger.{debug,info,warn,error,fatal}` — do not `new Logger(...)` for general app logging; the client already owns one named `'[Seyfert]'`.
-- **`LogLevels` needs the deep import.** It is exported from `seyfert/lib/common`, not the `'seyfert'` root. Same for `LoggerOptions`, `CustomizeLoggerCallback`, `AssignFilenameCallback`. `Logger` itself IS on the root.
+- **All logger symbols are root exports.** `Logger`, `LogLevels`, `LoggerOptions`, `CustomizeLoggerCallback`, and `AssignFilenameCallback` all import from `'seyfert'`.
 - **Levels gate output, not just formatting.** A log is dropped when `level < logger.level` or `active === false`. To see `Debug` you must lower `logLevel` (via the client `logger` option or `logger.level = LogLevels.Debug`).
 - **Static vs instance file logging.** `Logger.saveOnFile`, `Logger.dirname`, `Logger.customizeFilename`, `Logger.clearLogs` are STATIC (process-wide). Per-instance file output is the boolean `logger.saveOnFile` / the `saveOnFile` constructor option — either path triggers a write.
 - **`customize` returns a disposer.** Keep it if you ever need to revert (tests, hot-reload). Returning `undefined` from the callback suppresses that line — useful for filtering noisy levels.
@@ -234,7 +231,7 @@ export default class MyCommand extends Command {
 ## Doc vs Source Corrections
 
 - Docs show `Logger.dirname = 'logs'` as the value -> src default is `'seyfert-logs'` (`logger.ts:33`); the example merely reassigns it, which is valid.
-- Doc import `import { LogLevels } from 'seyfert/lib/common'` is correct and required: `LogLevels` is NOT in the root `'seyfert'` named exports (`index.ts:29` exports `Logger` only); the root barrel forwards selected names from `./common`.
+- Upstream docs deep-import `LogLevels` from `seyfert/lib/common`; as of the logger-export fix the root `'seyfert'` barrel also forwards `LogLevels`, `LoggerOptions`, `CustomizeLoggerCallback`, and `AssignFilenameCallback` from `./common` (`src/index.ts`), so prefer the root import. Published builds predating the fix still need the deep path for the non-`Logger` names.
 - Docs omit that `Logger.customize` RETURNS a disposer `() => void` (`logger.ts:74`).
 - Docs omit `Logger.getCustomizer()`, `Logger.customizeFilename()`, and `Logger.clearLogs()`.
 - Docs omit that the customize callback may return `undefined` to suppress a log line (`rawLog`: `if (!log) return`, `logger.ts:186`).
@@ -244,7 +241,7 @@ export default class MyCommand extends Command {
 
 - `src/common/it/logger.ts` — `Logger` class, `LogLevels`, `LoggerOptions`, callbacks, file logging, `formatMemoryUsage`.
 - `src/common/index.ts:7` — barrel exporting `Logger`, `LogLevels`, `LoggerOptions`, `CustomizeLoggerCallback`, `AssignFilenameCallback`.
-- `src/index.ts:29` — root exports (`Logger` present; `LogLevels` absent → needs deep import).
+- `src/index.ts` — root exports now include `Logger`, `LogLevels`, `LoggerOptions`, `CustomizeLoggerCallback`, and `AssignFilenameCallback` (forwarded from `./common`).
 - `src/client/base.ts:178/281/1300` — `client.logger` instance (`'[Seyfert]'`), `configureLogger`, `logger` client option.
 - `src/client/workerclient.ts:167` — worker client logger wiring.
 - `src/api/api.ts:119` + `src/api/shared.ts:44` — `client.rest.observe(...)` and observer payload shapes.
@@ -258,6 +255,6 @@ export default class MyCommand extends Command {
 - Configure level/name/file flags via `new Client({ logger: { ... } })` (v5) rather than mutating after start; the same option flows to worker clients.
 - To change format globally, call `Logger.customize` once at startup; keep the returned disposer if you need to revert. Chain via `Logger.getCustomizer()` to preserve existing behavior.
 - `Logger.saveOnFile`, `Logger.dirname`, `Logger.customizeFilename`, and `Logger.clearLogs` are STATIC (process-wide); per-instance file logging is the boolean `logger.saveOnFile` / the `saveOnFile` constructor option.
-- Always import `LogLevels` (and `LoggerOptions`, callback types) from `seyfert/lib/common` — they are not on the root entrypoint.
+- Import `LogLevels` (and `LoggerOptions`, callback types) from the `'seyfert'` root — they are re-exported there alongside `Logger`.
 - Logs below `logger.level` or when `active === false` are silently dropped; set the client `logger.logLevel` option to surface `Debug`.
 - Webhook reporting and REST-traffic logging are just core API usage (`client.webhooks.writeMessage` + `Embed`; `client.rest.observe`); no external package required.
