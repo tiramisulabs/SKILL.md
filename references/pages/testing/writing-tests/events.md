@@ -11,11 +11,11 @@ Shows how to test a Seyfert event handler in-process: register the real event wi
 ## Key APIs (verified)
 
 Core (seyfert-core, root import from `seyfert`):
-- `createEvent<E>({ data, run })` — `src/index.ts:68`. Signature: `createEvent<E extends ClientNameEvents | CustomEventsKeys>(data: { data: { name: E; once?: boolean }; run: (...args: ResolveEventParams<E>) => Awaitable<void> })`. It mutates `data.data.once ??= false` and returns the **same object** (no class wrapper). Pass the default export straight into `events: [...]`.
+- `createEvent<E>({ data, run })` — `src/index.ts:68`. Signature: `createEvent<E extends ClientNameEvents | CustomEventsKeys>(data: { data: { name: E; once?: boolean }; run: (...args: ResolveEventParams<E>) => Awaitable<unknown> })`. It mutates `data.data.once ??= false` and returns the **same object** (no class wrapper). Pass the default export straight into `events: [...]`.
 - Event name on `data.name` is the **camelCase** client event name (e.g. `'guildMemberAdd'`, `'messageCreate'`, `'ready'`), NOT the uppercase gateway name — `ClientNameEvents = Extract<keyof ClientEvents, string>` (`src/events/event.ts:14`). The uppercase form (`'GUILD_MEMBER_ADD'`) is only the raw gateway dispatch name used at the `emit` boundary.
 - `run` params resolve via `ResolveEventParams` / `EventContext` (`src/events/handler.ts:29-36`, `src/events/event.ts:22-29`). For a gateway event the tuple is `[transformedPayload, client, shardId]`: `[K in keyof ClientEvents]: (...data: [Awaited<ClientEvents[K]>, UsingClient, number]) => unknown`.
 - **Custom (non-gateway) events** (`commandsLoaded`, `componentsLoaded`, `uploadCommands` in `CustomEvents`, `src/events/event.ts:7-13`) resolve to `[...Parameters<CustomEvents[K]>, UsingClient]` — i.e. payload + client, **no trailing `shardId`** (v5 change; gateway events still get `shardId`).
-- `run` return type is `Awaitable<void>` (v5: was `any`) — `ClientEvent.run` at `src/events/event.ts:32`.
+- `run` return type is `Awaitable<unknown>` (v5: was `any`) — `ClientEvent.run` at `src/events/event.ts:32`.
 - Transformed first-arg shapes (the value your `run` receives), per hook:
   - `guildMemberAdd` → `GuildMemberStructure` (`src/events/hooks/guild.ts:86`, `Transformers.GuildMember`). `member.id`, `member.user.username` valid.
   - `messageCreate` → `MessageStructure` (`src/events/hooks/message.ts:16`, `Transformers.Message`). `message.reply(body)` / `message.write(body)` valid (`src/structures/Message.ts:164`).
@@ -181,7 +181,7 @@ test('greets via production config', async () => {
 - **`shardId` presence differs by event kind.** Gateway events: `run(payload, client, shardId)`. Custom events (`CustomEvents`): `run(payload, client)` only — adding a third param is a type error in v5.
 - **`createEvent` returns the plain input object** with `once` defaulted to `false`. There is no class instance — the default export is exactly what `events: [...]` expects.
 - **Throwing in a `once` handler resets it** (v5) so it can fire on the next dispatch — don't assume a one-shot is permanently consumed after a failed run.
-- **`run` must be `Awaitable<void>`** (v5; was `any`). Returning a non-promise value is fine, but the type no longer carries it.
+- **`run` returns `Awaitable<unknown>`** (v5: was `any`, then `void`, now widened to `unknown`). Returning a value — promise or not — is allowed and typed as `unknown`.
 - **DMs are recorded, not sent.** `client.users.write` does a real `createDM` + `messages.write` round-trip in production; the toolkit records it so you read it back via `bot.world.query.dm({ userId })`.
 
 ## Doc vs Source Corrections
@@ -189,13 +189,13 @@ test('greets via production config', async () => {
 - No v4/stale APIs in the upstream MDX — it already uses camelCase `createEvent` names and uppercase `emit` names. The dual-casing is correct and matches src: `createEvent` requires the camelCase `ClientNameEvents` key (`src/events/event.ts:14`); `emit` takes the raw gateway dispatch name.
 - Minor doc wording: the MDX calls event handlers "real classes" ("Like commands, event handlers are real classes"). Per src, `createEvent` returns the **plain input object** (`src/index.ts:72-73`), not a class instance — functionally identical for `events: [...]`, but there is no class wrapper.
 - `client.users.write` confirmed to internally `createDM` first, then `messages.write` — the page's "DMs each new member" description is accurate (`src/common/shorters/users.ts:46-47`).
-- v5 deltas relevant to this page (changelog → Events, confirmed in src): `run` is `Awaitable<void>`; custom (non-gateway) handlers dropped the trailing `shardId`; throwing in a `once` event resets it; `VOICE_CHANNEL_STATUS_UPDATE` now hands a resolved `VoiceChannel | undefined` instead of a raw cache promise.
+- v5 deltas relevant to this page (changelog → Events, confirmed in src): `run` is `Awaitable<unknown>`; custom (non-gateway) handlers dropped the trailing `shardId`; throwing in a `once` event resets it; `VOICE_CHANNEL_STATUS_UPDATE` now hands a resolved `VoiceChannel | undefined` instead of a raw cache promise.
 - All `@slipher/testing` surface (`createMockBot`, `emit`, `world.query.dm`, `world.query.channel`, `allowNoHandler`, `registeredEvents`, `loadFromConfig`) is NOT in seyfert-core — cannot be source-verified here; treat as doc-authoritative and verify the installed `@slipher/testing` version in the target project.
 
 ## Source Anchors
 
 - `src/index.ts:68-74` — `createEvent` definition/signature (returns input object, defaults `once`)
-- `src/events/event.ts:7-35` — `CustomEvents`, `ClientNameEvents`, `CustomEventsKeys`, `CallbackEventHandler` ([payload, client, number]), `EventContext`, `ClientEvent.run: Awaitable<void>`
+- `src/events/event.ts:7-35` — `CustomEvents`, `ClientNameEvents`, `CustomEventsKeys`, `CallbackEventHandler` ([payload, client, number]), `EventContext`, `ClientEvent.run: Awaitable<unknown>`
 - `src/events/handler.ts:29-45` — `ResolveEventParams` / `ResolveEventRunParams` (gateway vs custom)
 - `src/events/hooks/guild.ts:86` — `GUILD_MEMBER_ADD` transformer (member shape); `:41` — `GUILD_BAN_ADD`
 - `src/events/hooks/message.ts:16` — `MESSAGE_CREATE` transformer (`MessageStructure`)

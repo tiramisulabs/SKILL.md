@@ -12,7 +12,7 @@ Event modules are files that default-export `createEvent({ data: { name, once? }
 
 ## Key APIs (verified)
 
-- `createEvent<E extends ClientNameEvents | CustomEventsKeys>(data: { data: { name: E; once?: boolean }; run: (...args: ResolveEventParams<E>) => Awaitable<void> })` — root export `seyfert` (src/index.ts:68). Mutates `once` to default `false` if omitted (`data.data.once ??= false`), then returns the object unchanged. `run` is typed `Awaitable<void>` in v5.
+- `createEvent<E extends ClientNameEvents | CustomEventsKeys>(data: { data: { name: E; once?: boolean }; run: (...args: ResolveEventParams<E>) => Awaitable<unknown> })` — root export `seyfert` (src/index.ts:68). Mutates `once` to default `false` if omitted (`data.data.once ??= false`), then returns the object unchanged. `run` is typed `Awaitable<unknown>` in v5.
 - `config.bot(data: RuntimeConfig)` / `config.http(data: RuntimeConfigHTTP)` — `seyfert` (src/index.ts:76,83). `config.bot` resolves `intents` via `resolveGatewayIntents` (src/index.ts:86). `RuntimeConfigHTTP.locations` Omits `events` (HTTP has no gateway events) (src/client/base.ts).
 - `locations.events?: string` — optional sub-path under `locations.base`; resolved to a full path at load time (src/client/base.ts).
 - `Client.events: EventHandler` (non-optional) (src/client/client.ts:49); `WorkerClient.events: EventHandler` (src/client/workerclient.ts:87). `BaseClient` (and thus `HttpClient`) only has `events: CustomEventRunner = new CustomEventHandler(this)` — custom events work but NO gateway dispatch (src/client/base.ts:197).

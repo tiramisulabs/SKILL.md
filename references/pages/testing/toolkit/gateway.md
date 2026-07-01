@@ -31,7 +31,7 @@ Verification status: Source-verified (core) + external package (doc-authoritativ
 - `ShardManager.send<T extends GatewaySendPayload>(shardId, payload): Promise<boolean>` (async) — `sharder.ts:299`.
 - `get ShardManager.latency` — `sharder.ts:81` (average across shards).
 - Shard-lifecycle callbacks on `ShardManagerOptions`: `onShardDisconnect?(data: ShardDisconnectData)`, `onShardReconnect?(data: ShardReconnectData)`, `handlePayload(shardId, packet)`, `handleSendPayload?(shardId, payload)` — `src/websocket/discord/shared.ts:41-47`. `client.setServices({ gateway })` WRAPS each of these and also wires the `SHARD_DISCONNECT` / `SHARD_RECONNECT` events — `client.ts:63-106`.
-- `createEvent({ data: { name, once? }, run })` — `src/index.ts:68`; `run` is typed `Awaitable<void>`. Event file `name` is the camelCase client name (`'guildMemberAdd'`); you DISPATCH it in tests by emitting the UPPERCASE gateway name (`'GUILD_MEMBER_ADD'`).
+- `createEvent({ data: { name, once? }, run })` — `src/index.ts:68`; `run` is typed `Awaitable<unknown>`. Event file `name` is the camelCase client name (`'guildMemberAdd'`); you DISPATCH it in tests by emitting the UPPERCASE gateway name (`'GUILD_MEMBER_ADD'`).
 - Enums imported from `'seyfert'` are real root exports (NOT only discord-api-types passthroughs):
   - `PresenceUpdateStatus` — `src/types/payloads/gateway.ts:100`.
   - `ActivityType` — `src/types/payloads/gateway.ts:251`.
@@ -71,7 +71,7 @@ import { createEvent } from 'seyfert';
 export default createEvent({
   data: { name: 'guildMemberAdd' },
   async run(member, client) {
-    // run is Awaitable<void>; non-gateway custom events get no trailing shardId in v5
+    // run is Awaitable<unknown>; non-gateway custom events get no trailing shardId in v5
     await client.users.write(member.id, { content: `Welcome, ${member.user?.username}!` });
   },
 });
@@ -210,7 +210,7 @@ test('joinVoice sends an op-4 VoiceStateUpdate on the guild shard', async () => 
 - `src/websocket/discord/sharder.ts` (lines 30, 81, 248, 299) — `ShardManager extends Map<number, Shard>`, `latency`, `setPresence`, `send`.
 - `src/websocket/discord/shared.ts` (lines 41-47) — `ShardManagerOptions` callbacks (`handlePayload`, `handleSendPayload`, `onShardDisconnect`, `onShardReconnect`).
 - `src/websocket/discord/shard.ts` (line 170) — `Shard.send`.
-- `src/index.ts` (lines 48, 68) — `export * from './types'` (enum re-export); `createEvent(...)` signature (`run: Awaitable<void>`).
+- `src/index.ts` (lines 48, 68) — `export * from './types'` (enum re-export); `createEvent(...)` signature (`run: Awaitable<unknown>`).
 - `src/types/payloads/gateway.ts` (lines 100, 251), `src/types/utils/index.ts` (line 164) — `PresenceUpdateStatus`, `ActivityType`, `GatewayOpcodes` definitions.
 
 ## Agent Guidance

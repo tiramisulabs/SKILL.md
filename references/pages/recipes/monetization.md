@@ -14,7 +14,7 @@ Seyfert supports Discord monetization: entitlements, SKUs, premium buttons, and 
   - Getters: `startsAtTimestamp` / `endsAtTimestamp` → `number | null` (`Date.parse` of the ISO strings, else null).
   - Method: `consume()` → `client.applications.consumeEntitlement(this.id)` (for consumable items).
 - `EntitlementStructure` — `src/client/transformers.ts`, `InferCustomStructure<Entitlement, 'Entitlement'>`. This is what events and interactions actually deliver (custom-structure aware), NOT the raw `Entitlement` class. Built via `Transformers.Entitlement(client, apiEntitlement)`.
-- Entitlement events — `src/events/hooks/entitlement.ts`. Hooks `ENTITLEMENT_CREATE/UPDATE/DELETE` each transform `APIEntitlement` → `EntitlementStructure`. `createEvent` names: `entitlementCreate`, `entitlementUpdate`, `entitlementDelete`. Handler signature `(entitlement: EntitlementStructure, client) => Awaitable<void>`.
+- Entitlement events — `src/events/hooks/entitlement.ts`. Hooks `ENTITLEMENT_CREATE/UPDATE/DELETE` each transform `APIEntitlement` → `EntitlementStructure`. `createEvent` names: `entitlementCreate`, `entitlementUpdate`, `entitlementDelete`. Handler signature `(entitlement: EntitlementStructure, client) => Awaitable<unknown>`.
 - `ctx.interaction.entitlements` — `src/structures/Interaction.ts:110,135`. Typed `EntitlementStructure[]`, built per-interaction via `interaction.entitlements.map(e => Transformers.Entitlement(...))`. Present on command and component interactions (`declare entitlements` at lines 441, 668).
 - `Button` premium API — `src/builders/Button.ts:78`: `setSKUId(skuId: string)` (capital S-K-U) sets `sku_id`. `setStyle(ButtonStyle.Premium)` (`src/types/payloads/components.ts:188`). Premium buttons OMIT `custom_id`, `emoji`, `label` (the type `Omit<...,'custom_id'|'emoji'|'label'>` at `components.ts:167`). They do NOT emit component interactions when clicked — Discord handles the purchase flow.
 - `ApplicationShorter` (`client.applications`) — `src/common/shorters/application.ts`:
@@ -227,7 +227,7 @@ await client.applications.deleteTestEntitlement(test.id);
 - `entitlementDelete` is NOT an expiry signal — it fires only on refund or manual deletion. Subscriptions that simply lapse never emit it. Detect lapses via `endsAt`/`endsAtTimestamp` or `entitlementUpdate`.
 - Premium buttons (`ButtonStyle.Premium`) do not produce a `ComponentContext` interaction; do not register a component handler for them. Discord owns the checkout UI.
 - Guild-scoped entitlements have `guildId` but no `userId` (and vice-versa). Always null-check `entitlement.userId` before `client.users.fetch`.
-- Event `run` is typed `Awaitable<void>` in v5 — returning a value is fine but ignored; custom (non-gateway) handlers no longer receive a trailing `shardId` (entitlement events are gateway events, so their signature is `(entitlement, client)`).
+- Event `run` is typed `Awaitable<unknown>` in v5 — returning a value is fine but ignored; custom (non-gateway) handlers no longer receive a trailing `shardId` (entitlement events are gateway events, so their signature is `(entitlement, client)`).
 - `consume()` only makes sense for consumable SKUs (`SKUType.Consumable`); calling it on a subscription entitlement is meaningless. Deliver the item in your own store first, then consume, so a failed delivery doesn't lose the purchase.
 - `EntitlementType.ApplicationSubscription` (8) is the value for app-subscription purchases; `PremiumSubscription` (2) is Discord Nitro, not your SKU. Gate on `skuId` rather than `type` when you can.
 

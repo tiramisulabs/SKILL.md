@@ -49,7 +49,7 @@ declare module 'seyfert' {
 - `setup?(client, api?): Awaitable<void>` — async startup; `api` is the FULL `SeyfertPluginApi`
 - `teardown?(client, api?): Awaitable<void>` — cleanup; `api` is the read-only `SeyfertPluginTeardownApi`
 
-Keep `client`/`ctx` factories **synchronous** (they run before/around context creation). Do NOT add a typed client key by assigning in `setup` — declare it in `client` so it is typed and installed at the right time.
+Keep `client`/`ctx` factories **synchronous**. `client` factories run **eagerly at client construction** in object **insertion order** — `installPluginClientMaps` (`registry.js`) does `Object.defineProperty(client, key, { value: factory(client) })` per key, so a later factory's `client` arg already sees earlier-installed keys (declare `redis` before an `api` factory that reads `client.redis`). Installation **throws** if `key in client`: the key collides with a native client member (`rest`, `cache`, `logger`, `langs`, `commands`, `components`, `shared`, `events`, `users`, `guilds`, `channels`, `webhooks`, …) or with another plugin's key — pick app-specific names. Do NOT add a typed client key by assigning in `setup` — declare it in `client` so it is typed and installed at the right time.
 
 ```ts
 import { createPlugin } from 'seyfert';
@@ -176,6 +176,41 @@ Plugins contribute client option fragments via top-level `options(current)` or `
 Contribution ordering (`order.ts`, `orderBand`): `PluginOrder.Before` (band 0) → **any** `number` (band 1, sorted ascending, so negatives precede positives) → unspecified/default order (band 2) → `PluginOrder.After` (band 3); ties within a band broken by registration sequence. Note `0` is just a normal number in band 1 — it is NOT the "default", which is the *absence* of an `order` value (band 2, after all numbers). `PluginOrderOpt = PluginOrder.Before | PluginOrder.After | number`. The `order` option is accepted on `events.on`, `hooks.on`, `middlewares.add`, `rest.observe`, `autocomplete.wrap`, `gateway.wrapSendPayload`/`gateway.onDispatch`, and `*.defaults` (note `gateway.addIntents` takes NO `order`).
 
 ## Recipes
+
+### App-wide services as a plugin (instead of augmenting `SeyfertRegistry.client`)
+
+Prefer this over hand-augmenting `SeyfertRegistry.client` with `db`/`redis`/… props and assigning them imperatively after `new Client()`. Build the singletons once in the factory closure (so an `api` reuses the same `redis`), expose them via sync `client` factories, and do async startup in `setup`. Types reach `ctx.client.*` through the `plugins` augmentation — you DROP the `client` intersection entirely.
+
+```ts
+import { createClient } from '@redis/client';
+import { createPlugin, definePlugins, type ParseClient, Client } from 'seyfert';
+
+export function servicesPlugin() {
+  const redis = createClient();
+  const api = new Api(API_KEY, redis);              // build once; api reuses this redis
+  return createPlugin({
+    name: 'services',
+    client: { redis: () => redis, api: () => api }, // sync → client.redis / client.api
+    async setup(client) {                            // async init lives here, NOT in factories
+      redis.on('error', e => client.logger.error('redis', e));
+      await redis.connect();
+      await api.warmup();
+    },
+    // teardown: () => redis.close(),                // close owned transports on client.close()
+  });
+}
+
+export const plugins = definePlugins(servicesPlugin());
+// new Client({ plugins });
+declare module 'seyfert' {
+  interface SeyfertRegistry {
+    client: ParseClient<Client<true>>;   // NO { api; redis } intersection
+    plugins: typeof plugins;             // <- THIS is what types ctx.client.api / .redis
+  }
+}
+```
+
+`ctx.client.api` / `ctx.client.redis` are now typed everywhere with zero `SeyfertRegistry.client` extra-prop augmentation. Closure-building `api` from `redis` sidesteps factory ordering; if instead a factory reads `client.redis`, declare `redis` **first** (factories install eagerly in insertion order — see Authoring).
 
 ### Feature plugin: typed middleware (global) + command + ctx helper
 

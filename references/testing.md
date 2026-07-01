@@ -247,7 +247,7 @@ getMentionables/getRadioValues/getCheckbox/getCheckboxValues/getInputValue/getFi
 
 `createEvent` data name is **camelCase** client name (`ClientNameEvents`), e.g. `'guildMemberAdd'`.
 `bot.emit` takes the **UPPERCASE** raw gateway dispatch name. Mixing them is the classic silent trap.
-v5: `run` is `Awaitable<void>`; gateway handlers are `(payload, client, shardId)`; **custom
+v5: `run` is `Awaitable<unknown>`; gateway handlers are `(payload, client, shardId)`; **custom
 (non-gateway) handlers drop the trailing `shardId`** → `(payload, client)`. Throwing in a `once`
 handler resets it so it can fire again.
 

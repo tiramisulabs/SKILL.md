@@ -76,6 +76,7 @@ Apply these unless the *installed* version proves otherwise.
 - `RuntimeConfig.locations` only requires `base`; `commands`/`langs`/`events`/`components` are optional.
 
 ### Events
+- Event `run` return type is **`Awaitable<unknown>`** (widened from `Awaitable<void>`; `createEvent` `src/index.ts:70`, `ClientEvent` `events/event.ts:32`, `EventValues` `events/handler.ts:49`), so handlers may `return` a value. `CallbackEventHandler` was already `=> unknown`. Landed in dev builds ≥ `28477111245` (older builds/docs still say `void`).
 - Custom events: `client.events.runCustom(name, ...args)` (alias `emit`); the **client is auto-injected** as the last arg of `run` (don't pass it). Built-in custom events include `commandsLoaded`, `componentsLoaded`, `uploadCommands` (`events/event.ts:7`). An event file may default-export an **array** of `createEvent` objects. `events.reload*` throws `SeyfertError('RELOAD_NOT_SUPPORTED')` on Cloudflare Workers.
 
 ### Plugins

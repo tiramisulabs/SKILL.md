@@ -153,7 +153,7 @@ export default createEvent({
 });
 ```
 
-- `once` defaults to `false`. `run` is typed `Awaitable<void>`.
+- `once` defaults to `false`. `run` is typed `Awaitable<unknown>` (widened from `void` so a handler may `return` a value, e.g. `return ctx.write(...)`; dev builds ≥ `28477111245`).
 - Gateway handlers receive `(payload, client, shardId)`; CUSTOM (non-gateway) handlers receive `(...yourArgs, client)` — NO trailing `shardId`.
 - One handler per event `name` — a second file with the same name OVERWRITES the first. Combine logic instead.
 - Some payloads are TUPLES: `voiceStateUpdate` → `[state, old?]`, `voiceChannelStatusUpdate` → `[status, channel?]` (channel resolved). Destructure the first param.

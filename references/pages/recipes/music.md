@@ -27,7 +27,7 @@ Seyfert core APIs touched by the recipe (all importable from the `seyfert` root 
 - `GuildMember.voice(mode?: 'rest' | 'flow' | 'cache')` — returns a `VoiceStateStructure` (or cached `| undefined`); `src/structures/GuildMember.ts:95`. Defaults to `'flow'` (cache → rest).
 - `MessageFlags.Ephemeral` — enum in `src/types/payloads/channel.ts:779`, re-exported through `src/types` → `src/index.ts`, so `import { MessageFlags } from "seyfert"` is valid.
 - `Embed` builder — `src/builders/Embed.ts` (barrel `src/builders/index.ts:33`).
-- `createEvent({ data: { name, once? }, run })` — `src/index.ts:68`. `run` is typed `Awaitable<void>`; custom/non-gateway handlers no longer receive a trailing `shardId` (v5).
+- `createEvent({ data: { name, once? }, run })` — `src/index.ts:68`. `run` is typed `Awaitable<unknown>`; custom/non-gateway handlers no longer receive a trailing `shardId` (v5).
 
 External (NOT in seyfert-core — verify versions in the target project):
 
@@ -337,7 +337,7 @@ export default createEvent({
 
 - Import style: the MDX splits imports into two `from "seyfert"` statements and lists `MessageFlags` separately. Source confirms a single barrel works — `MessageFlags`, the decorators, `createStringOption`, `Embed`, `createEvent`, and `CommandContext` are all exported from the `seyfert` root. Consolidated in the examples. (cosmetic; doc not wrong, just split)
 - `send` callback signature: doc is correct against source — `ShardManager.send(shardId: number, payload)` takes the numeric shard id first (`src/websocket/discord/sharder.ts:299`), which is why `calculateShardId(guildId)` is called inside. Flagged because it is easy to misread as `send(guildId, payload)`.
-- v5 deltas applied to the added examples (NOT in the original MDX, which only shows `play`): lowercase option keys are now compile-time enforced; numeric options (`createNumberOption`) require numeric `choices`/autocomplete values; `ctx.inGuild()` narrows to `GuildCommandContext` so `guildId`/`member`/`me()` are non-undefined; `createEvent`'s `run` is `Awaitable<void>` and custom (non-gateway) handlers lost the trailing `shardId`.
+- v5 deltas applied to the added examples (NOT in the original MDX, which only shows `play`): lowercase option keys are now compile-time enforced; numeric options (`createNumberOption`) require numeric `choices`/autocomplete values; `ctx.inGuild()` narrows to `GuildCommandContext` so `guildId`/`member`/`me()` are non-undefined; `createEvent`'s `run` is `Awaitable<unknown>` and custom (non-gateway) handlers lost the trailing `shardId`.
 - The kazagumo/shoukaku surface (`Kazagumo`, `Connectors.Seyfert`, `createPlayer`, `search`, `players.get`, `player.skip/destroy/setVolume`, events, queue/track shapes) is external and unverifiable against seyfert-core — verify against the installed package versions.
 
 ## Source Anchors

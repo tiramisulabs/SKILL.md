@@ -131,7 +131,7 @@ export default class TranscodeCommand extends Command {
 
 ### Enqueue from an event (use `entity.client.queues`)
 
-Inside an event handler there is no `ctx`; reach the registry through the client carried on the entity. Custom event `run` is `Awaitable<void>` in v5; gateway handlers no longer get a trailing `shardId` for custom events.
+Inside an event handler there is no `ctx`; reach the registry through the client carried on the entity. Custom event `run` is `Awaitable<unknown>` in v5; gateway handlers no longer get a trailing `shardId` for custom events.
 
 ```ts
 import { createEvent } from 'seyfert';
@@ -249,7 +249,7 @@ process.on('SIGTERM', () => {
 - None for core APIs. `definePlugins` (`:283`), `createPlugin` (`:240`), `createPluginFactory` (`:267`), `SeyfertRegistry` (`types.ts:32`), `new Client({ plugins })` (`base.ts:195/272`), and `client.close()` (`base.ts:502`) all match ./src exactly and resolve from the `'seyfert'` root barrel.
 - The MDX comment says jobs are "switched on the `job` field" but the handler/registration switches on `job.name` — the `job` key is the discriminant in the `RegisteredQueues` registration; `name` is the runtime field on the job object. Package convention, not a core conflict; verify against the installed `@slipher/queues` types.
 - Queue decorators/drivers/registry methods are NOT in seyfert-core; they cannot be source-verified here. Treat the queue API as doc-authoritative and confirm against the installed package version.
-- v5 reminders that touch these examples (verified in checklist): option keys must be lowercase; `write`/`editOrReply` return `void` unless the response flag is `true`; middleware uses `stop()` (no `pass()`); custom event `run` is `Awaitable<void>` with no trailing `shardId`.
+- v5 reminders that touch these examples (verified in checklist): option keys must be lowercase; `write`/`editOrReply` return `void` unless the response flag is `true`; middleware uses `stop()` (no `pass()`); custom event `run` is `Awaitable<unknown>` with no trailing `shardId`.
 
 ## Source Anchors
 

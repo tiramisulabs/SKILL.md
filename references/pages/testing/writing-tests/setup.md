@@ -27,7 +27,7 @@ Core seyfert APIs (root imports from `'seyfert'` via `src/index.ts -> export * f
 - `ctx.options` — `ContextOptions<T>` (`chatcontext.ts:68`). Parsed values, e.g. `ctx.options.name`.
 - `ctx.fetchResponse()` — `chatcontext.ts:163`. Resolves the sent message (used to attach a collector).
 - `ActionRow<T>` (`src/builders/ActionRow.ts:16`), `Button` (`src/builders/Button.ts:9`), `ButtonStyle` — component builders for component tests.
-- `createEvent({ data: { name }, run })` — `src/index.ts:68`. v5: `run` is `Awaitable<void>`; custom (non-gateway) handlers no longer receive a trailing `shardId`.
+- `createEvent({ data: { name }, run })` — `src/index.ts:68`. v5: `run` is `Awaitable<unknown>`; custom (non-gateway) handlers no longer receive a trailing `shardId`.
 - `Message.createComponentCollector(options?)` (`src/structures/Message.ts:76`) and `client.users.write(userId, body)` (`src/common/shorters/users.ts:46`, DMs the user).
 
 External toolkit API (doc-authoritative — verify version in target project; NOT in seyfert-core):
@@ -184,7 +184,7 @@ test('greets new members', async () => {
 });
 ```
 
-Note (v5): `createEvent.run` is `Awaitable<void>` and custom (non-gateway) handlers no longer get a trailing `shardId` — gateway-event handlers like `guildMemberAdd` are unaffected (`(payload, client)`).
+Note (v5): `createEvent.run` is `Awaitable<unknown>` and custom (non-gateway) handlers no longer get a trailing `shardId` — gateway-event handlers like `guildMemberAdd` are unaffected (`(payload, client)`).
 
 ### 4. loadFromConfig with explicit dirs
 
@@ -232,7 +232,7 @@ test('greet', async () => {
 
 ## Doc vs Source Corrections
 
-- None for the core seyfert APIs — every import, decorator, builder, and method in the doc examples resolves exactly as shown in `./src` and matches the v5 checklist (lowercase option keys, `ctx.write` returns `void` unless `withResponse: true`, `createEvent.run` is `Awaitable<void>`).
+- None for the core seyfert APIs — every import, decorator, builder, and method in the doc examples resolves exactly as shown in `./src` and matches the v5 checklist (lowercase option keys, `ctx.write` returns `void` unless `withResponse: true`, `createEvent.run` is `Awaitable<unknown>`).
 - The `@slipher/testing` surface (`createMockBot` + all options, `bot.slash`/`clickButton`/`selectMenu`/`emit`, `result.*`, `bot.world`) is NOT in seyfert-core and cannot be source-verified; treat the MDX as authoritative and confirm the installed version's API in the target project.
 - Freshness note (not a doc error): on `more-qol`, `createStringOption` choices and `Options` arrays now accept `readonly`; doc examples type-check unchanged.
 
