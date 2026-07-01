@@ -6,9 +6,13 @@ This skill was built from three inputs:
 
 - Rendered Vercel docs at `https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/...`.
 - The raw docs MDX from `tiramisulabs/seyfert-web` branch `seyfert-v5` (`content/docs/**.mdx`) — faithful code examples, fetched per page.
-- Authoritative Seyfert source, chosen per task: the target project's installed `node_modules/seyfert`, the current HEAD of a Seyfert source checkout when working on the framework, or Seyfert source explicitly provided by the user.
+- Authoritative Seyfert source, chosen per task: the target project's installed `node_modules/seyfert`, the current HEAD of the Seyfert Git repository (`https://github.com/tiramisulabs/seyfert`) or a checkout of it when working on the framework, or Seyfert source explicitly provided by the user.
 
 For **core** APIs, that authoritative source wins over docs. For **external** packages (`@slipher/*`, `yunaforseyfert`, lavalink, `@slipher/testing`), verify the actual installed package before using docs-only APIs.
+
+## Version Scope
+
+This skill targets **Seyfert v5**. If a target project has an installed `seyfert` version lower than `5.0.0`, treat that package as **outdated**: it is authoritative for preserving and safely editing that project's existing code, but it is **not** evidence for changing this skill's v5 guidance. For the skill itself, resolve framework truth from Seyfert v5 source: the current Git repository HEAD, a v5 checkout, or v5 source explicitly provided by the user.
 
 ## How To Use This File
 
@@ -16,7 +20,7 @@ For **core** APIs, that authoritative source wins over docs. For **external** pa
 
 ## Local Source Landmarks
 
-Resolve conflicts from these files in the installed package, current Seyfert source checkout, or source explicitly provided by the user:
+Resolve conflicts from these files in the installed package, current HEAD of the Seyfert Git repository, a local checkout of it, or source explicitly provided by the user:
 
 - Root exports / helpers: `src/index.ts` — re-exports client/api/builders/cache/commands/components/events/langs/structures/types and defines `createEvent`, `config.bot`, `config.http`, `extendContext`.
 - Clients: `src/client/{base,client,httpclient,workerclient,index,intents,types,transformers,collectors}.ts`.
