@@ -12,6 +12,12 @@ Subcommands are classes that extend `SubCommand` (abstract, must implement `run`
 
 Discord allows max two nesting levels: `group > subcommand > options` OR `subcommand > options`. A `SubCommand` may carry basic options (`create*Option`) but cannot nest further subcommands.
 
+**Strongly recommended — organize every command that has subcommands into its OWN dedicated folder**: parent at `commands/<cat>/<cmd>/<cmd>.ts` + each subcommand at `commands/<cat>/<cmd>/commands/<sub>.ts`. This layout applies to BOTH loading strategies — the folders are identical, only the wiring differs:
+- `@AutoLoad()` — discovers the subfolder automatically. Here the dedicated folder is MANDATORY, not just tidy: `@AutoLoad` scans the parent's directory *recursively* (`getFiles(dirname(parentFile))`, `handler.ts:351-353`), so a parent sharing a folder with other commands silently swallows them as its subcommands.
+- `@Options([CreateSub, DeleteSub])` — the exact same folder layout, but you `import` each subcommand from the `commands/` subfolder and list them explicitly (no scan → no swallowing risk, so isolation is a convention here rather than a hard requirement).
+
+Use folders either way; pick `@AutoLoad` for convenience or `@Options` for explicit control. With `@AutoLoad`, keep helper-only files outside the parent's folder tree too: a `shared.ts`/`groups.ts`/resolver file under that folder is still scanned as a candidate subcommand. See examples 1, 2, 2b + the layout gotcha below.
+
 ## Key APIs (verified)
 
 All imported from the root `'seyfert'` barrel (re-exported via `src/index.ts`).
@@ -24,7 +30,7 @@ All imported from the root `'seyfert'` barrel (re-exported via `src/index.ts`).
 - `@Groups(groups)` — `src/commands/decorators.ts:107`. `Record<string, LocalizedGroupDefinition>`; sets `groups` and builds `groupsAliases` from each group's `aliases`.
 - `@GroupsT(groups)` — `src/commands/decorators.ts:91`. Translated variant; `Record<string, TranslatedGroupDefinition>` (uses `name`/`description` localization keys). Stored on `__tGroups` plus builds `groupsAliases`.
 - `defineGroups(groups)` — `src/commands/decorators.ts:85`. Identity helper returning the typed groups object (for the `@Group(def, name)` overload). Two overloads cover Localized vs Translated records.
-- `@AutoLoad()` — `src/commands/decorators.ts:177`. Sets `__autoload = true`. The handler then loads every sibling file in the parent's directory and pushes their default-exported `SubCommand`s onto `options` (`src/commands/handler.ts:369-401`).
+- `@AutoLoad()` — `src/commands/decorators.ts:177`. Sets `__autoload = true`. The handler then does `getFiles(dirname(parentFilePath))` — i.e. it scans the parent file's OWN directory **recursively** — and pushes every default-exported `SubCommand` it finds onto `options` (`src/commands/handler.ts:351-401`). Consequence (see layout gotcha below): the parent must live in its own dedicated folder, and subcommands may sit directly beside it OR in a nested subfolder (both are picked up by the recursive scan).
 - Group types: `GroupDefinition`, `GroupDefinitions`, `LocalizedGroupDefinition`, `TranslatedGroupDefinition` — `src/commands/decorators.ts:68-83`. Both definition shapes require `defaultDescription`; optional `name`, `description`, `aliases`.
 - `CommandContext<T extends OptionsRecord, M>` — `src/commands/applications/chatcontext.ts:45`. Passed to `run`. `ctx.options` is typed `ContextOptions<T>` (`chat.ts:117`) — pass `CommandContext<typeof options>` to type a subcommand's own options. Narrowing guards: `isChat()` and `inGuild(): this is GuildCommandContext<T, M>` (`chatcontext.ts:256,260`).
 
@@ -79,6 +85,72 @@ export default class CreateCommand extends SubCommand {
   }
 }
 ```
+
+### 2b. Project layout for `@AutoLoad` — the parent MUST be in its own folder
+
+Because `@AutoLoad` scans `dirname(parentFile)` **recursively**, the parent command has to be isolated in a
+dedicated folder; otherwise it will treat every unrelated command file that happens to share its directory as one
+of its subcommands. Give the parent a folder named after the command, put the parent file inside it, and keep the
+subcommands in a `commands/` subfolder (the community/`stelle` convention — the recursive scan reaches them):
+
+```
+commands/
+  music/
+    play.ts                  # flat command (no subcommands) — fine directly in the category folder
+    playlist/                # <-- dedicated folder for the subcommand-bearing command
+      playlist.ts            #     parent: @Declare + @AutoLoad(), EMPTY body (no run)
+      commands/
+        create.ts            #     each subcommand: export default class extends SubCommand
+        delete.ts
+        load.ts
+```
+
+```ts
+// commands/music/playlist/playlist.ts — parent
+import { AutoLoad, Command, Declare } from 'seyfert';
+
+@Declare({ name: 'playlist', description: 'Manage your playlists.' })
+@AutoLoad()
+export default class PlaylistCommand extends Command {} // no run — leaves run
+```
+
+```ts
+// commands/music/playlist/commands/create.ts — one subcommand per file
+import { type CommandContext, Declare, Options, SubCommand, createStringOption } from 'seyfert';
+
+const options = { name: createStringOption({ description: 'Playlist name', required: true }) };
+
+@Declare({ name: 'create', description: 'Create a playlist.' })
+@Options(options)
+export default class CreateSubCommand extends SubCommand {
+  run(ctx: CommandContext<typeof options>) {
+    return ctx.write({ content: `Created ${ctx.options.name}` });
+  }
+}
+```
+
+The **same folder layout works with explicit `@Options`** (no `@AutoLoad`) — import the subs from the subfolder and list them, which is the deterministic alternative when you don't want directory scanning:
+
+```ts
+// commands/music/playlist/playlist.ts — explicit variant, same folders
+import { Command, Declare, Options } from 'seyfert';
+import CreateSubCommand from './commands/create';
+import DeleteSubCommand from './commands/delete';
+
+@Declare({ name: 'playlist', description: 'Manage your playlists.' })
+@Options([CreateSubCommand, DeleteSubCommand]) // subs live in ./commands/ just like the AutoLoad layout
+export default class PlaylistCommand extends Command {}
+```
+
+Groups get one more nesting level, still inside the parent's folder (e.g. `blacklist/blacklist.ts` +
+`blacklist/commands/add-user.ts` with `@Group('add')`). The `commands/` subfolder name is a convention, not
+required — any nested folder works (recursive scan for `@AutoLoad`, arbitrary import path for `@Options`) — but
+keeping it consistent matches idiomatic projects.
+
+Do not put shared helper files inside an auto-loaded parent folder. The scanner visits every `.ts`/`.js` file
+under `dirname(parentFile)`; a helper with no default export logs `no default export found ... ignoring it as a
+SubCommand`, and a default export that is not a `SubCommand` logs the wrong type. Move helpers to a non-command
+module such as `src/lib/ticket/resolveTicket.ts` and import them from the leaves.
 
 ### 3. A subcommand with its OWN basic options (typed `ctx.options`)
 
@@ -237,12 +309,14 @@ export default class WeatherCommand extends Command {}
 - Parent commands that hold subcommands must NOT define `run`. `SubCommand` is abstract with an abstract `run`, so each leaf must implement it; the parent has nothing to run.
 - `@Group('x')` without a matching `@Groups`/`@GroupsT` entry for `'x'` throws at build time — `Command.toJSON()` reads `this.groups![i.group].defaultDescription` (`chat.ts:388`). Use the `defineGroups` + `@Group(def, name)` overload to catch the typo in the editor instead.
 - Do NOT combine `@AutoLoad()` and manual `@Options([...])` on the same parent — pick one loading strategy.
-- `@AutoLoad()` only picks up `export default` SubCommands from sibling files; a named-only export is logged (`no default export found ... ignoring it as a SubCommand`) and skipped. `@Options([Class])` works with either named or default exports because you import the class yourself.
+- **`@AutoLoad()` parents MUST live in their own folder.** The handler scans `dirname(parentFile)` recursively (`handler.ts:351-353`, `getFiles(dirname(file.path))`). If you drop an `@AutoLoad` parent directly into a shared category folder (e.g. `commands/guild/wishes.ts` next to `commands/guild/setlang.ts`), it will pull `setlang` and every other file in `commands/guild/` in as "subcommands". Isolate it: `commands/guild/wishes/wishes.ts` + `commands/guild/wishes/commands/*.ts`. Flat commands (no subcommands) can stay directly in the category folder. Explicit `@Options([...])` uses the same subfolder layout but imports the subs itself, so it has no swallowing risk — the isolation is only *mandatory* for `@AutoLoad`, recommended for both.
+- `@AutoLoad()` only picks up `export default` SubCommands from files under the parent folder. A named-only export or helper-only file is logged (`no default export found ... ignoring it as a SubCommand`) and skipped; a default export that is not a `SubCommand` warns as the wrong type. Keep helpers outside the auto-loaded parent folder, preferably outside `locations.commands` in `src/lib/**`. `@Options([Class])` works with either named or default exports because you import the class yourself.
 - Option record keys must be lowercase in v5 (compile-time error otherwise) — applies to a subcommand's own `@Options({...})` too. `choices`/`channel_types` are readonly; use `as const`.
 - `@Declare`'s `name` is forced lowercase at the type level; Discord rejects non-lowercase subcommand/group names anyway.
 - Two nesting levels max: a `SubCommand` cannot contain another `SubCommand`. Want `/a b c`? `a` = Command, `b` = group (`@Groups` + `@Group`), `c` = subcommand.
 - `ctx.write`/`ctx.editOrReply` return `void` unless you pass the response flag `true` (v5: then you get a message/webhook back) — `chatcontext.ts:88`.
 - Per-subcommand lifecycle hooks (`onRunError`, `onMiddlewaresError`, `onOptionsError`, `onBeforeOptions`, etc.) live on `BaseCommand` and can be defined directly on a `SubCommand` class, scoped to that leaf.
+- **`ctx.command` for a subcommand invocation is the LEAF `SubCommand`, not the parent** (`chatcontext.ts` `this.command = command`; `handle.js` resolves the executed sub). The top-level command is available as `ctx.resolver.parent` (chat contexts only; `optionresolver.ts` `parent?: Command`). Important: Seyfert still calls `stablishSubCommandDefaults(parent, sub)` before execution — parent `@Middlewares` are prepended to leaf middlewares, parent hooks are inherited when the leaf has none, bot permissions are merged, and parent `props`/contexts/integration types copy to the leaf when unset (`handler.ts` `stablishSubCommandDefaults`). Use `ctx.command` for the effective executable command; use `ctx.resolver.parent` only when code needs the top-level name/identity or custom metadata stored outside Seyfert's inherited fields.
 
 ## Doc vs Source Corrections
 
@@ -256,13 +330,13 @@ export default class WeatherCommand extends Command {}
 
 - `src/commands/applications/chat.ts` (`Command`, `SubCommand`, `BaseCommand`; `Command.toJSON` group/subcommand emission at :375-405; `ContextOptions` at :117)
 - `src/commands/decorators.ts` (`@Declare`, `@Options`, `@Group`, `@Groups`, `@GroupsT`, `defineGroups`, `@AutoLoad`; group definition types :68-83)
-- `src/commands/handler.ts` (`__autoload` scanning :369-401, default-export warnings :379-395)
+- `src/commands/handler.ts` (`__autoload` recursive scanning, default-export warnings, `stablishSubCommandDefaults` inheritance)
 - `src/commands/applications/chatcontext.ts` (`CommandContext`, `ctx.options`/`ctx.write`, `isChat`/`inGuild` guards :256-262, `GuildCommandContext` :265)
 - `src/commands/applications/options.ts` (`create*Option` helpers for subcommand options)
 
 ## Agent Guidance
 
-- Choose `@Options([...])` for explicit control (named exports OK) or `@AutoLoad()` for folder-convention loading (every sibling subcommand must be `export default`).
+- Choose `@Options([...])` for explicit control (named exports OK) or `@AutoLoad()` for folder-convention loading (every discovered subcommand must be `export default`). With `@AutoLoad`, put the parent in its OWN dedicated folder (`<cmd>/<cmd>.ts` + `<cmd>/commands/<sub>.ts`) — the handler scans the parent's whole directory recursively, so a parent sharing a folder with other commands will swallow them as subcommands. Keep helper files outside that parent folder.
 - Reach for `defineGroups` + `@Group(def, name)` whenever you use groups — it turns a runtime build crash (typo'd group name) into a compile error.
 - Type a subcommand's own options by declaring the `options` object, decorating with `@Options(options)`, and writing `run(ctx: CommandContext<typeof options>)`.
 - Narrow with `ctx.inGuild()` inside `run` before touching guild-only data (`member`, guild channels) to get a `GuildCommandContext` with non-null fields.

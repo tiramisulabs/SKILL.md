@@ -8,6 +8,8 @@ Verification status: Source-verified (v5, the authoritative Seyfert source)
 
 Seyfert has a built-in i18n system. You place language modules in the `langs` directory (configured via `locations.langs`), each exporting a default object whose values are strings, nested objects, arrays, or functions returning strings. You register the locale shape into TypeScript with `ParseLocales<typeof <lang>>` under the `langs` key of the `SeyfertRegistry` augmentation (v5: NOT `DefaultLocale` directly — that type is now derived from the registry). You then read translations through `ctx.t` (interaction locale auto-selected) and `client.t(locale)`. The file name (minus extension) becomes the locale code.
 
+**Strongly recommended — constrain every non-default locale with `satisfies typeof <DefaultLang>`** (e.g. `export default { ... } satisfies typeof English`, importing the base locale with `import type English from './en-US.js'`). Only the base/default locale is left unconstrained (it defines the shape and is the one you pass to `ParseLocales`). This is NOT cosmetic: it makes TypeScript reject drift that otherwise fails *silently at runtime* — missing keys, misplaced/excess keys, and — most easily overlooked — **function/placeholder-shape drift**: a parameterized `(t) => ...` leaf accidentally translated as a plain string, or an object-arg leaf whose param keys don't match the base (e.g. a translator writing `` `songTitle}` `` instead of `` `{songTitle}` `` collapses the leaf to a `string` and `satisfies` flags it). Without the constraint, `ctx.t.foo(args)` on that locale throws "not a function" at runtime only for that language.
+
 ## Key APIs (verified)
 
 All of the following are re-exported from the root `'seyfert'` (`src/index.ts:44` -> `export * from './langs'`).
@@ -234,7 +236,8 @@ await client.langs.reloadAll(false);
 
 ## Common patterns / gotchas
 
-- Register exactly ONE `langs: ParseLocales<typeof <lang>>` in `SeyfertRegistry` — any locale module works since shapes are identical. Keep secondary files honest with `satisfies typeof English` to catch missing keys at compile time.
+- Register exactly ONE `langs: ParseLocales<typeof <lang>>` in `SeyfertRegistry` — any locale module works since shapes are identical, but pick your default/base locale as the single source of truth.
+- **End every non-default locale file with `satisfies typeof <BaseLang>`** (the base locale itself stays unconstrained). This catches, at compile time, three classes of drift that are otherwise silent runtime bugs in that one language: (1) missing keys, (2) misplaced/excess keys, (3) **function/placeholder-shape mismatch** — a leaf that is `(t) => \`...${t.x}...\`` in the base but a plain `string` in the translation (commonly from a malformed placeholder like `` `x}` `` missing its `{`), or an object-arg leaf with different param keys. Calling such a leaf (`ctx.t.a.b({ x }).get()`) only fails for the drifted locale, so it slips through untested locales — `satisfies` turns it into a build error.
 - Always set a `default` locale. Without it, `ctx.t` for a locale with no matching file can hit `LangRouter` with no resolvable locale and throw `UNDEFINED_LOCALE`/`INTERNAL_ERROR`. With a default, `getValue` falls back internally.
 - File name (minus extension) IS the locale code (`parse()` -> `file.name.split('.').slice(0,-1)`). Name files to Discord locale strings (`en-US.ts`, `es-ES.ts`) OR wire alternate codes through `aliases` so e.g. `en-GB` resolves to `en.ts`.
 - `aliases` is `Record<string, LocaleString[]>` in `setServices` (canonical -> list of alias codes) but stored as `[string, LocaleString[]][]` on the handler; `getLocale(alias)` returns the canonical key.

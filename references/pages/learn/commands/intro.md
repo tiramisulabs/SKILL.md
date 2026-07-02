@@ -198,21 +198,34 @@ export default class KickCommand extends Command {
 
 ### 6. Autoloaded subcommands
 
-`@AutoLoad()` tells the loader to pull sibling files in the command's folder as subcommands (sets `__autoload = true`), so you skip the explicit `@Options([...])` class list.
+`@AutoLoad()` tells the loader to pull default-exported `SubCommand` files from the parent command's own folder tree (sets `__autoload = true`), so you skip the explicit `@Options([...])` class list. Because the scan is recursive from `dirname(parentFile)`, put the parent in a dedicated folder and keep helper-only files outside that folder.
 
 ```ts
+// commands/tag/tag.ts
 import { Command, Declare, AutoLoad } from 'seyfert';
 
 @Declare({ name: 'tag', description: 'Tag system' })
 @AutoLoad()
 export default class TagCommand extends Command {}
-// Each ./tag/*.ts exporting a SubCommand is loaded automatically.
+```
+
+```ts
+// commands/tag/commands/create.ts
+import { Declare, SubCommand, type CommandContext } from 'seyfert';
+
+@Declare({ name: 'create', description: 'Create a tag' })
+export default class CreateTag extends SubCommand {
+    async run(ctx: CommandContext) {
+        await ctx.write({ content: 'created' });
+    }
+}
 ```
 
 ## Common patterns / gotchas
 
 - **`export default` the top-level command.** The loader resolves `x.default ?? x` (`chat.ts:344`). Subcommand classes passed to `@Options([...])` can be named exports.
 - **Decorator order doesn't matter**, but every command needs `@Declare`. Subcommands need `@Declare` + (usually) `@Group`; the parent needs `@Groups`/`@Group` defining the group keys those children reference.
+- **`@AutoLoad()` scans recursively from the parent file's folder.** Isolate the parent (`commands/tag/tag.ts` + `commands/tag/commands/*.ts`) and keep helpers (`shared.ts`, group maps, resolvers) outside that folder.
 - **Option keys must be lowercase** — enforced at compile time in v5 via `LowercaseOptionsRecord` (`decorators.ts:135`). `{ User: ... }` is a type error.
 - **`choices` / `channel_types`** on options are `readonly`; use `as const` when defining them inline.
 - **Permissions read-back:** after `@Declare`, `defaultMemberPermissions`/`botPermissions` are stored as resolved `bigint`, not the original string array. A bad permission string throws (static `PermissionsBitField.resolve`).
@@ -247,6 +260,7 @@ export default class TagCommand extends Command {}
 
 - Use this page when scaffolding or reviewing top-level commands and their `@Declare` metadata. For option helpers, subcommands, groups, and middleware, follow the dedicated pages.
 - Always `export default` the top-level command class. Subcommand classes referenced in `@Options([...])` can be named exports.
+- For `@AutoLoad()`, use a dedicated parent folder and default-export every leaf `SubCommand`; use explicit `@Options([...])` when you want named exports or same-file examples.
 - Chat-input commands REQUIRE `name` (lowercase) and `description`. Context-menu (User/Message) commands must NOT pass `description`. Entry-point commands require `handler` and cannot use `ignore`/`aliases`/`guildId`.
 - Pass permissions as readable string arrays (e.g. `['Administrator']`); they resolve to bigints internally and throw on unknown strings — don't read back the original array.
 - v5 essentials to enforce in generated code: option keys lowercase; `write`/`editOrReply` return `void` unless the response flag is `true`; middleware control flow uses `stop()` (no `pass()`); `onInternalError(client, command, error?)` has `command` before `error`; `ctx.inGuild()` narrows to `GuildCommandContext`. Channel structures also gained `isGuild()`/`isNamed()` guards for narrowing `await ctx.channel()` results.

@@ -62,6 +62,8 @@ Apply these unless the *installed* version proves otherwise.
 
 ### Commands & options
 - **Options accept readonly arrays** (commit "accept readonly option arrays"): `choices` and `channel_types` are `readonly` (`commands/applications/options.ts:39,140`); `@Options(...)` / `@Middlewares([...])` accept readonly arrays. `as const` choices work.
+- **`@AutoLoad()` scans the parent command's own directory recursively** (`commands/handler.ts` `getFiles(dirname(file.path))`). A parent with subcommands must live in a dedicated folder (`commands/<cat>/<cmd>/<cmd>.ts` + `<cmd>/commands/*.ts`), or it will treat unrelated sibling commands as subcommand candidates. Do not put helper-only files (`shared.ts`, `groups.ts`, constants, resolvers) anywhere under an auto-loaded parent folder; files without a default export warn as "no default export found ... ignoring it as a SubCommand", and default exports that are not `SubCommand`s warn as the wrong type. Move shared helpers outside the auto-loaded command tree, usually `src/lib/**`.
+- **Subcommand execution uses the leaf as `ctx.command`, with the parent on `ctx.resolver.parent`.** Before execution, `CommandHandler.stablishSubCommandDefaults(parent, sub)` prepends parent middlewares to leaf middlewares, inherits parent hooks when the leaf has none, merges bot permissions, and copies `props`/contexts/integration types when unset. So parent `@Middlewares(...)` and `@Declare({ props })` are not lost. Use `ctx.resolver.parent` only when code needs the top-level command identity or custom metadata that a project-specific decorator stored outside Seyfert's inherited fields.
 - Context-menu commands: `@Declare` **must set `type` explicitly** (`ApplicationCommandType.User` / `.Message`) and the menu declare variant **omits `description`** (`Omit<DecoratorDeclareOptions,'description'>`, `decorators.ts:26-28`). Use `MenuCommandContext` + `ctx.target`.
 - Autocomplete callbacks must call `interaction.respond([...])` — calling `reply` throws.
 - Custom prefix parsers subclass `HandleCommand`, which is **not root-exported**: `import { HandleCommand } from 'seyfert/lib/commands/handle'`. Register via `client.setServices({ handleCommand: CustomHandleCommand })`.
@@ -70,6 +72,7 @@ Apply these unless the *installed* version proves otherwise.
 
 ### i18n
 - `ctx.t` returns a named `SeyfertLocale` proxy (commit "preserve ctx.t typing by returning a named SeyfertLocale alias"): `type SeyfertLocale = __InternalParseLocale<DefaultLocale> & { get(locale?: string): DefaultLocale }` (`langs/router.ts:60`). Resolve a value with `ctx.t.some.path.get(locale?)`. `DefaultLocale` is derived from `SeyfertRegistry.langs` (`shared.ts:26`) — do not augment `DefaultLocale` directly.
+- Use `satisfies typeof <BaseLang>` on every non-default locale file. It catches missing keys plus function/placeholder-shape drift at compile time, instead of letting `ctx.t.some.functionLeaf(args).get()` fail only for the drifted language at runtime.
 
 ### Builders / formatting
 - `Formatter.codeBlock(content, language = 'txt')` — **content is the FIRST argument** (`common/it/formatter.ts:117`). Docs showing `codeBlock('ts', '...')` are wrong; use `codeBlock('const x = 1', 'ts')`.

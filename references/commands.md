@@ -18,7 +18,7 @@ Always `export default` file-loaded commands (loader uses `x.default ?? x`).
 - `@Declare(opts)` — metadata. Chat-input shape requires `name` + `description`.
 - `@Options(record | (new()=>SubCommand)[])` — slash options OR subcommand classes. Option keys forced lowercase at type level.
 - `@Middlewares(readonly string[])` — per-command middleware names (registered keys). Tuple is `readonly` (no `.push`).
-- `@AutoLoad()` — load default-exported sibling SubCommand files from the parent's folder.
+- `@AutoLoad()` — load default-exported SubCommand files from the parent's folder. It scans `dirname(parentFile)` recursively, so the parent must live in its own folder and helper-only files must stay outside that auto-loaded subtree.
 - `@Group(name)` / `@Group(defs, name)`, `@Groups(record)`, `@GroupsT(record)` — subcommand grouping; `defineGroups(obj)` identity helper for the type-checked `@Group(defs, name)` overload.
 - `@Locales({ name?, description? })` — per-locale `[LocaleString, value][]` tuples → `*_localizations`.
 - `@LocalesT(nameKey?, descKey?)` — translation keys (`FlatObjectKeys<DefaultLocale>`) stored on `__t`.
@@ -190,7 +190,9 @@ export default class WarnCommand extends Command {
 
 ## Subcommands & Groups
 
-Parent holds subcommands and has NO `run`. Register via `@Options([SubA, SubB])` (named or default exports) OR `@AutoLoad()` (default-exported siblings only; never combine the two). Declare groups on the parent with `@Groups`/`@GroupsT` (each needs `defaultDescription`); assign per-subcommand with `@Group('name')`. A `@Group` without a matching `@Groups` key throws at build — use `defineGroups` + `@Group(defs, name)` to catch the typo at compile time. Max nesting: `group > subcommand > options`.
+Parent holds subcommands and has NO `run`. Register via `@Options([SubA, SubB])` (named or default exports) OR `@AutoLoad()` (default-exported files discovered from the parent's folder; never combine the two). Declare groups on the parent with `@Groups`/`@GroupsT` (each needs `defaultDescription`); assign per-subcommand with `@Group('name')`. A `@Group` without a matching `@Groups` key throws at build — use `defineGroups` + `@Group(defs, name)` to catch the typo at compile time. Max nesting: `group > subcommand > options`.
+
+For `@AutoLoad()`, isolate the parent in a dedicated folder: `commands/<cat>/<cmd>/<cmd>.ts` plus `commands/<cat>/<cmd>/commands/*.ts`. The loader scans that whole folder recursively, so `shared.ts`, `groups.ts`, constants, or resolvers inside it are treated as candidate subcommands and will warn/skip. Put shared helpers outside the auto-loaded tree, usually `src/lib/**`. Explicit `@Options([...])` can use the same layout but imports the leaves itself.
 
 ```ts
 // commands/mod/groups.ts
@@ -226,6 +228,8 @@ export class AddWarn extends SubCommand {
   }
 }
 ```
+
+Execution detail: for `/mod warns add`, `ctx.command` is the leaf `AddWarn`, while `ctx.resolver.parent` is the top-level `ModCommand`. Seyfert's loader applies `stablishSubCommandDefaults(parent, sub)`: parent middlewares are prepended to leaf middlewares, parent hooks are inherited when the leaf has none, bot permissions are merged, and `props`/contexts/integration types copy to the leaf when unset. Use `ctx.resolver.parent` only when you truly need top-level command identity or custom project metadata stored outside Seyfert's inherited fields.
 
 ## Context Menus (type is explicit, no description)
 
@@ -441,7 +445,7 @@ declare module 'seyfert' {
 - Middlewares use `next`/`stop` (NEVER `pass`); exactly one is called; `CommandContext<Opts, 'mw'>` for typed `ctx.metadata`; global data via `GlobalMetadata`; globals don't run for component/modal handlers.
 - `onMiddlewaresError` has 3 args; `onInternalError` is `(client, command, error?)`.
 - `write`/`editOrReply` return `void` unless the response flag is `true` (pass `true` to get a Message for collectors).
-- Parent-with-subcommands has no `run`; `@Group` names match a `@Groups` key (prefer `defineGroups` + `@Group(defs, name)`).
+- Parent-with-subcommands has no `run`; `@Group` names match a `@Groups` key (prefer `defineGroups` + `@Group(defs, name)`). `@AutoLoad` parents live in their own folders and contain only default-exported `SubCommand` leaves under that folder.
 - Component handlers set `componentType`; `ComponentContext` has no `editResponse` (use `editOrReply(body, true)`); modal accessors via `getInputValue`/`getChannels`/etc.
 - Prefix: `InternalOptions.withPrefix` augmented; no `ctx.modal()` on prefix paths; custom parser via deep-imported `HandleCommand` (registered as a class).
 - Module augmentation targets `SeyfertRegistry` (no `UsingClient`/`RegisteredMiddlewares`/`ParseMiddlewares`).

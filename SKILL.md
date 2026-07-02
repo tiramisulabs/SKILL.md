@@ -139,6 +139,7 @@ Open only what the task needs:
 - Keep Seyfert artifacts **class-based** unless the project clearly differs: `Command`, `SubCommand`, `ContextMenuCommand`, `ComponentCommand`, `ModalCommand`; events via `createEvent({ data, run })`.
 - **Module augmentation lives on `interface SeyfertRegistry`** (keys `client`, `middlewares`, `langs`, `plugins`). Do **not** augment `interface UsingClient` / `RegisteredMiddlewares` / `DefaultLocale` — on v5 those are *derived types* and can no longer be interface-merged. See `source-truth.md`.
 - File-loaded commands/components/events/langs use **default exports**. Programmatic registration (`commands.set`, `components.set`, `langs.set`) suits serverless / no-filesystem deployments.
+- Commands with subcommands should live in a dedicated folder. With `@AutoLoad()`, this is required: Seyfert scans the parent command's directory recursively, so keep unrelated helpers (`shared.ts`, constants, group maps, resolvers) outside that auto-loaded folder, preferably in `src/lib/**`.
 - `client.start()` does **not** upload application commands — call `client.uploadCommands({ cachePath })` deliberately when registration is part of the task.
 - Middleware control flow is `next()` / `stop()` only — **there is no `pass()`** (use `stop()` / `stop(null)` to silently skip).
 - Discord constraints: slash names lowercase; context-menu names may use spaces/case **and require an explicit `@Declare({ type })` with no `description`**; autocomplete must `respond()` (not `reply()`); action-row/component limits apply.

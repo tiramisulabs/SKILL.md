@@ -48,6 +48,10 @@ export default {
 } satisfies typeof enUS;
 ```
 
+Put `satisfies typeof <BaseLang>` on every non-default locale file, not just one example. The base/default
+locale defines the shape; secondary locales should be checked against it so TypeScript catches missing keys,
+misplaced keys, and function-leaf drift such as translating `ping: ({ ping }) => ...` as a plain string.
+
 ```ts
 // index.ts — register the shape (enables typed ctx.t + typed dot-paths) and set defaults
 import { Client, type ParseClient, type ParseLocales } from 'seyfert';
@@ -122,7 +126,7 @@ const options = {
 };
 ```
 
-**Gotchas:** files MUST be named to Discord locale codes (or wired via `aliases`). Metadata resolution skips (logs a warning) when a dot-path lands on a non-string — it never throws. `reload`/`reloadAll` throw `SeyfertError('RELOAD_NOT_SUPPORTED')` under Cloudflare Workers. Langs config is on `setServices`, NOT the `Client` constructor (`BaseClientOptions` has no `langs` key).
+**Gotchas:** files MUST be named to Discord locale codes (or wired via `aliases`). Non-default locale modules should end with `satisfies typeof <BaseLang>` so function leaves and placeholder object shapes cannot drift silently. Metadata resolution skips (logs a warning) when a dot-path lands on a non-string — it never throws. `reload`/`reloadAll` throw `SeyfertError('RELOAD_NOT_SUPPORTED')` under Cloudflare Workers. Langs config is on `setServices`, NOT the `Client` constructor (`BaseClientOptions` has no `langs` key).
 
 ---
 
@@ -474,7 +478,7 @@ declare module 'seyfert' {
 
 ## Review Checklist
 
-- Lang shape registered once via `ParseLocales<typeof lang>` under `SeyfertRegistry.langs`; a `default` locale set; files named to Discord codes (or aliased)?
+- Lang shape registered once via `ParseLocales<typeof lang>` under `SeyfertRegistry.langs`; a `default` locale set; files named to Discord codes (or aliased); every non-default locale constrained with `satisfies typeof <BaseLang>`?
 - Runtime strings via `ctx.t.path.get()`; function leaves CALLED then `.get()`? Metadata via `@LocalesT`/`@Locales`/`@GroupsT`/`defineGroups`/option `locales` (object) / choice `locales` (string)?
 - Langs/cache config via `client.setServices({...})` (NOT the constructor for langs)?
 - Cache: resource access null-checked? `set`/`patch` passing `CacheFrom` FIRST? `disabledCache` form correct (bool/object/predicate)? `bans` keyed with `guildId`? `asyncCache` augmented for Redis/Worker?

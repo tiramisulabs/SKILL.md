@@ -188,7 +188,7 @@ export default class ServerInfo extends Command {
 The resolver reads up to 3 leading words (`parent`, `group`, `sub`) and honors `aliases` / `groupsAliases` (`handle.ts:505-597`). Same classes you use for slash subcommands.
 
 ```ts
-import { Command, SubCommand, type CommandContext, Declare, Options, AutoLoad } from 'seyfert';
+import { Command, SubCommand, type CommandContext, Declare, Options } from 'seyfert';
 
 @Declare({ name: 'ban', description: 'Ban a user.', aliases: ['b'] })
 export class BanSub extends SubCommand {
@@ -199,7 +199,7 @@ export class BanSub extends SubCommand {
 
 // !mod ban ...   or   !mod b ...   (subcommand alias)
 @Declare({ name: 'mod', description: 'Moderation.', aliases: ['m'] })
-@AutoLoad()
+@Options([BanSub]) // named export is fine with explicit @Options; @AutoLoad would require a default-exported file
 export default class ModCommand extends Command {}
 ```
 
