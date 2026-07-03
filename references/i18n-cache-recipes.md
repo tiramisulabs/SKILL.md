@@ -419,19 +419,24 @@ export class Pro extends Command {
 
 ---
 
-## Recipe: Music (EXTERNAL: lavalink client, e.g. `kazagumo`/`shoukaku`)
+## Recipe: Music (EXTERNAL: `hoshimi` — Lavalink v4 client)
 
-Seyfert has no built-in audio. Only core glue: the gateway voice `send` callback, a `declare module` to type `client.kazagumo`, and normal commands reading voice states.
+Seyfert has no built-in audio. Core glue only: attach a `Hoshimi` manager to the client, forward the `raw` gateway event to `updateVoiceState`, `init({ id, username })` on `botReady`, and read voice states in commands. Full recipe + verified API: `pages/recipes/music.md`.
 
 ```ts
-import { Client } from 'seyfert';
-const client = new Client();
-client.kazagumo = new Kazagumo({
-  defaultSearchEngine: 'youtube',
-  // ShardManager.send(shardId: NUMBER, payload) — shard id FIRST, hence calculateShardId
-  send: (guildId, payload) => client.gateway.send(client.gateway.calculateShardId(guildId), payload),
-}, new Connectors.Seyfert(client), nodes);
-declare module 'seyfert' { interface Client { kazagumo: Kazagumo } } // augments Client directly (separate from SeyfertRegistry)
+import { Client, type ParseClient } from 'seyfert';
+import { Hoshimi, SearchSources } from 'hoshimi';
+
+class MusicClient extends Client {
+  hoshimi = new Hoshimi({
+    defaultSearchSource: SearchSources.Youtube, // NOT defaultSearchEngine/SearchEngines (those don't exist)
+    // gateway.send(shardId: NUMBER, payload) — shard id FIRST, hence calculateShardId
+    sendPayload: async (guildId, payload) => this.gateway.send(this.gateway.calculateShardId(guildId), payload),
+    nodes: [{ host: 'localhost', port: 2333, password: 'youshallnotpass', secure: false }],
+  });
+}
+// type client.hoshimi through SeyfertRegistry.client — NOT `interface Client { ... }`
+declare module 'seyfert' { interface SeyfertRegistry { client: ParseClient<MusicClient> } }
 ```
 
 ```ts
@@ -440,7 +445,7 @@ import { MessageFlags, type GuildCommandContext } from 'seyfert';
 export async function requirePlayer(ctx: GuildCommandContext) {
   const voice = await ctx.member.voice('cache');
   if (!voice?.channelId) { await ctx.write({ content: 'Join a voice channel first.', flags: MessageFlags.Ephemeral }); return null; }
-  const player = ctx.client.kazagumo.players.get(ctx.guildId); // external
+  const player = ctx.client.hoshimi.getPlayer(ctx.guildId); // external
   if (!player) { await ctx.write({ content: 'Nothing is playing.', flags: MessageFlags.Ephemeral }); return null; }
   if (player.voiceId && player.voiceId !== voice.channelId) { await ctx.write({ content: 'Join my channel.', flags: MessageFlags.Ephemeral }); return null; }
   return player;
@@ -448,7 +453,7 @@ export async function requirePlayer(ctx: GuildCommandContext) {
 ```
 
 - Enable the `GuildVoiceStates` intent or `member.voice()` won't resolve. `member.voice()` defaults to `'flow'` (cache→REST) and may reject — prefer `'cache'` in guards.
-- `write`/`editOrReply` return `void` unless you pass the response flag `true`. Always `player.destroy()` on `playerEmpty`/empty channel. `Kazagumo`, `createPlayer`, `search`, queue/track APIs are external — version-verify.
+- `createPlayer` is sync (returns the player) then `await player.connect()`. `write`/`editOrReply` return `void` unless you pass the response flag `true`. `Hoshimi`, `createPlayer`, `search`, `SearchSources`/`LoadType`, queue/track APIs are external — version-verify.
 
 ---
 
@@ -484,6 +489,6 @@ declare module 'seyfert' {
 - Cache: resource access null-checked? `set`/`patch` passing `CacheFrom` FIRST? `disabledCache` form correct (bool/object/predicate)? `bans` keyed with `guildId`? `asyncCache` augmented for Redis/Worker?
 - Custom resource: manual `interface Cache` augmentation or access-site cast? Plugin resource registered via `api.cache.resource(...)`? Custom structure: both `Transformers.X` AND `CustomStructures` (subclass to keep built-ins)?
 - DB plugin: connection in `setup`/`teardown` (not `register`); async `ctx` helper returns a function?
-- Imports from root `'seyfert'` (including `LogLevels`/`LoggerOptions`), except type-only `seyfert/lib/types`? External packages (yuna, kazagumo, redis) version-verified?
+- Imports from root `'seyfert'` (including `LogLevels`/`LoggerOptions`), except type-only `seyfert/lib/types`? External packages (yuna, hoshimi, redis) version-verified?
 - v5 hygiene: lowercase option keys; readonly `choices`/`channel_types` as `as const`; `timeout` in ms; `ban({ deleteMessageSeconds, reason })`; `stop()`/`stop('reason')` not `pass()`; no `isSendable()`; `PermissionsBitField.resolve` throws on bad input?
 - `reload`/`reloadAll` avoided under Cloudflare Workers? Monetization gated by `skuId` (+ `endsAtTimestamp`/`deleted`), SKUs configured in the portal?

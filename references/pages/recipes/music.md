@@ -1,370 +1,242 @@
-# Music Library (Kazagumo / Lavalink)
+# Music Library (hoshimi / Lavalink v4)
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/recipes/music
 
 Coverage reference: i18n-cache-recipes.md
 
-Verification status: Source-verified (core) + external package (kazagumo/shoukaku — verify versions in target project)
+Verification status: Source-verified (core) + external package **hoshimi** verified against the `hoshimi` type declarations (`dist/index.d.cts`, `hoshimi@0.3.10-dev`) and real-world Seyfert + hoshimi bot usage. Always version-verify `hoshimi` in the target project.
 
 ## Page Summary
 
-Seyfert has no built-in audio playback. The recipe wires an external Lavalink client, `kazagumo` (built on `shoukaku`), into the Seyfert `Client` so commands can search and play tracks. The only Seyfert-specific glue is the gateway voice-payload `send` callback (using `calculateShardId` + `gateway.send`), a `declare module "seyfert"` augmentation to type `client.kazagumo`, and normal slash commands that read the member's voice state and write results. All player/queue/track APIs (`Kazagumo`, `createPlayer`, `search`, `player.queue`, `player.play`) are external and target-project specific.
+Seyfert has no built-in audio. The v5 docs recipe wires an **external** Lavalink v4 client, [`hoshimi`](https://npmjs.com/package/hoshimi), which bundles the node connection **and** the player (a single dependency). The core glue is minimal:
 
-## Key APIs (verified)
+1. Attach a `Hoshimi` manager to the client (a `Client` subclass holds it).
+2. Forward Discord's `raw` gateway packets to `manager.updateVoiceState(...)` so hoshimi can track voice state.
+3. Call `manager.init({ id, username })` once on `botReady` so it can authenticate to the node.
+4. Commands create/drive players (`createPlayer` → `connect` → `search` → `queue.add` → `play`).
 
-Seyfert core APIs touched by the recipe (all importable from the `seyfert` root barrel):
+Requires a running **Lavalink v4** node. In v5 the manager is typed through **`SeyfertRegistry.client`** (either `ParseClient<MusicClient>` or `ParseClient<Client<true>> & { hoshimi: Hoshimi }`) — NOT the v4-style `interface Client { ... }` augmentation.
 
-- `Client` — main client class. `src/client/client.ts` (re-exported via `src/index.ts`).
-- `client.gateway: ShardManager` — `gateway!: ShardManager` field on `Client`, `src/client/client.ts:41`.
-- `ShardManager.calculateShardId(guildId: string): number` — `src/websocket/discord/sharder.ts:89`.
-- `ShardManager.send<T extends GatewaySendPayload>(shardId: number, payload: T)` — `src/websocket/discord/sharder.ts:299`. Takes a numeric `shardId` FIRST, then the payload; this matches the recipe's `send: (guildId, payload) => client.gateway.send(client.gateway.calculateShardId(guildId), payload)`.
-- `ShardManager.joinVoice(guildId, channelId, { self_deaf, self_mute })` — `src/websocket/discord/sharder.ts:254`; `ShardManager.leaveVoice(guildId)` — `:271`. Native Seyfert voice-state helpers if you ever wire voice without a library that does it for you.
-- `client.start()` then `client.uploadCommands({ applicationId?, cachePath? })` — `src/client/base.ts:1056`.
-- `Command`, `Declare`, `Options` decorators + `createStringOption` — `src/commands/decorators.ts` and `src/commands/applications/options.ts:146` (barrel `src/commands/index.ts`).
-- `CommandContext` — generic over the options object; exposes `options`, `client`, `guildId`, `channelId`, `member`, `author`. `src/commands/applications/chatcontext.ts` (getters: guildId :236, channelId :240, author :244, member :248).
-- `ctx.write(body, withResponse?)` / `ctx.editOrReply(body, withResponse?)` — `src/commands/applications/chatcontext.ts`. Return `void` unless `withResponse === true`.
-- `ctx.me(mode?)` — bot's `GuildMember`; `src/commands/applications/chatcontext.ts:188`. In a guild context (`ctx.inGuild()` / `GuildCommandContext`) the non-undefined overload at :275 resolves a `GuildMemberStructure`.
-- `GuildMember.voice(mode?: 'rest' | 'flow' | 'cache')` — returns a `VoiceStateStructure` (or cached `| undefined`); `src/structures/GuildMember.ts:95`. Defaults to `'flow'` (cache → rest).
-- `MessageFlags.Ephemeral` — enum in `src/types/payloads/channel.ts:779`, re-exported through `src/types` → `src/index.ts`, so `import { MessageFlags } from "seyfert"` is valid.
-- `Embed` builder — `src/builders/Embed.ts` (barrel `src/builders/index.ts:33`).
-- `createEvent({ data: { name, once? }, run })` — `src/index.ts:68`. `run` is typed `Awaitable<unknown>`; custom/non-gateway handlers no longer receive a trailing `shardId` (v5).
+## Key APIs (verified against `hoshimi` `dist/index.d.cts`)
 
-External (NOT in core Seyfert — verify versions in the target project):
+The entire `hoshimi` surface is external and unverifiable against core Seyfert — confirmed against `hoshimi@0.3.10-dev`; version-verify in the target project.
 
-- `kazagumo`: `Kazagumo`, `createPlayer`, `search`, `players.get`, `player.queue.add`, `player.skip`, `player.pause`, `player.setVolume`, `player.destroy`, `player.play`, `player.playing`, `player.paused`, `player.queue.current`, result `type === "PLAYLIST"`, `result.tracks`, `result.playlistName`. Kazagumo emits `playerStart`, `playerEnd`, `playerEmpty` events.
-- `shoukaku`: `Connectors.Seyfert`, `NodeOption`, `kazagumo.shoukaku.on("ready", ...)`.
+- `new Hoshimi(options: HoshimiOptions)` — the manager (`extends EventEmitter<HoshimiEvents>`). `createHoshimi(options)` is an equivalent factory.
+- `HoshimiOptions`: `sendPayload(guildId, payload): Awaitable<void>` **(required)**, `nodes: NodeOptions[]` **(required)** — `{ host, port, password, secure }`, `client?: Partial<ClientInfo>`, `defaultSearchSource?: SearchSource` (default `SearchSources.Youtube`), plus `queueOptions?` / `nodeOptions?` / `restOptions?` / `playerOptions?`.
+- Manager: `players: Collection<string, PlayerStructure>`, `ready`, `getPlayer(guildId): PlayerStructure | undefined`, `deletePlayer(guildId): boolean`, `updateVoiceState(packet): Promise<void>`, `init(info: ClientInfo): void`, `createPlayer(options: PlayerOptions): PlayerStructure`, `search(options: SearchOptions): Promise<QueryResult>`.
+- `ClientInfo` = `{ id: string; username?: string }`.
+- `PlayerOptions` = `{ guildId: string; voiceId: string; volume?: number (100); textId?: string; selfDeaf?: boolean (true); selfMute?: boolean (false); node?: NodeIdentifier }`. **`createPlayer` is synchronous** and returns the player; call `await player.connect()` afterwards.
+- `Player` (what `createPlayer` returns, `PlayerStructure`): `connect(): Promise<this>`, `disconnect()`, `search(options: SearchOptions): Promise<QueryResult>`, `play(options?): Promise<void>`, `stop()`, `skip(options?)`, `seek(pos)`, `destroy(options?)`, `setPaused(paused?): Promise<boolean>`, `setVolume(v): Promise<void>`, `setLoop(mode: LoopMode): this`; props `queue`, `playing`, `paused`, `connected`, `destroyed`, `volume`, `loop`, `position`, `guildId`, `voiceId`, `textId`, `lyrics`.
+- `player.queue` (`Queue`): `add(track | track[], position?): Promise<this>`, `current: TrackStructure | null`, `previous(remove?)`, `tracks`.
+- `SearchOptions` = `SearchQuery & { requester: TrackRequester | null; node? }`; `SearchQuery` = `{ query: string; source?: SearchSource | SourceName; params? }`.
+- `QueryResult` = `{ loadType: LoadType; tracks: TrackStructure[]; playlist: Playlist | null; ... }`. `track.info.title` / `track.info.uri`; `playlist.info.name` (`PlaylistInfo`).
+- Enums: `LoadType` (`Track="track"`, `Playlist="playlist"`, `Search="search"`, `Empty="empty"`, `Error="error"`), `LoopMode` (`Track=1`, `Queue=2`, `Off=3`), `SearchSources` (`Youtube="ytsearch"`, `YoutubeMusic="ytmsearch"`, `Spotify="spsearch"`, `SoundCloud`, …), `EventNames`, `DebugLevels`, `DestroyReasons`.
+- Raw-packet types (for the `raw` event): `VoicePacket`, `VoiceServer`, `VoiceState`, `ChannelDeletePacket` (the method accepts the internal `GatewayPackets` union).
+- Manager events (`HoshimiEvents` / `EventNames`): `nodeReady (node, retries, payload)`, `playerCreate (player)`, `trackStart (player, track, payload)`, `trackEnd`, `queueEnd (player, queue)`, `playerDestroy`, `error`, `debug`, … — `track` params are `TrackStructure | null`.
 
-## Code Examples (verified)
+## Code Examples
 
-### index.ts — client + Kazagumo bootstrap
+### index.ts — MusicClient + Hoshimi bootstrap
 
-Core glue verified; kazagumo/shoukaku external.
+Core glue verified; hoshimi external.
 
 ```ts
-import { Client } from "seyfert";
-import { Kazagumo } from "kazagumo";
-import { type NodeOption, Connectors } from "shoukaku";
+import { Client, type ParseClient } from 'seyfert';
+import { Hoshimi, SearchSources } from 'hoshimi';
 
-const client = new Client();
+// A custom client that holds the hoshimi manager
+class MusicClient extends Client {
+  hoshimi = new Hoshimi({
+    defaultSearchSource: SearchSources.Youtube,
+    sendPayload: async (guildId, payload) => {
+      await this.gateway.send(this.gateway.calculateShardId(guildId), payload);
+    },
+    nodes: [{ host: 'localhost', port: 2333, password: 'youshallnotpass', secure: false }],
+  });
+}
 
-const nodes: NodeOption[] = [
-  { name: "Node", url: "localhost:2333", auth: "youshallnotpass", secure: false },
-];
+const client = new MusicClient();
 
-client.kazagumo = new Kazagumo(
-  {
-    defaultSearchEngine: "youtube",
-    // calculateShardId -> number, then gateway.send(shardId, payload)
-    send: (guildId, payload) =>
-      client.gateway.send(client.gateway.calculateShardId(guildId), payload),
-  },
-  new Connectors.Seyfert(client),
-  nodes
-);
+// See whether the node connected
+client.hoshimi.on('nodeReady', (node) => console.log(`Lavalink ${node.id}: Ready!`));
 
-client.kazagumo.shoukaku.on("ready", (name) =>
-  console.log(`Lavalink ${name}: Ready!`)
-);
-
-declare module "seyfert" {
-  interface Client {
-    kazagumo: Kazagumo;
+declare module 'seyfert' {
+  interface SeyfertRegistry {
+    client: ParseClient<MusicClient>;
   }
 }
 
 client.start().then(() => client.uploadCommands());
 ```
 
-Note: `declare module "seyfert" { interface Client { kazagumo } }` augments the `Client` class directly — this is independent of the v5 `SeyfertRegistry` augmentation (that one is for `client`/`middlewares`/`langs`/`plugins`). Adding a plain instance field to `Client` is still done this way.
-
-### src/commands/play.ts — search & play
-
-Core APIs verified; kazagumo calls external.
+If you keep a plain `Client` and attach the manager some other way, type it with the intersection form instead:
 
 ```ts
-import {
-  Command,
-  Declare,
-  Options,
-  MessageFlags,
-  createStringOption,
-  type CommandContext,
-} from "seyfert";
+declare module 'seyfert' {
+  interface SeyfertRegistry { client: ParseClient<Client<true>> & { hoshimi: Hoshimi } }
+}
+```
+
+### src/events/raw.ts — forward gateway packets
+
+Discord delivers voice updates through the `raw` event; forward them so hoshimi can track voice state.
+
+```ts
+import type { ChannelDeletePacket, VoicePacket, VoiceServer, VoiceState } from 'hoshimi';
+import { createEvent } from 'seyfert';
+
+type AnyPacket = VoicePacket | VoiceServer | VoiceState | ChannelDeletePacket;
+
+export default createEvent({
+  data: { name: 'raw' },
+  run(payload, client) {
+    client.hoshimi.updateVoiceState(payload as AnyPacket);
+  },
+});
+```
+
+### src/events/botReady.ts — authenticate to the node
+
+Once the bot is ready we know its id, so hoshimi can connect to the nodes.
+
+```ts
+import { createEvent } from 'seyfert';
+
+export default createEvent({
+  data: { name: 'botReady', once: true },
+  run(user, client) {
+    client.hoshimi.init({ id: user.id, username: user.username });
+  },
+});
+```
+
+### src/commands/play.ts — search + queue + play
+
+Core command plumbing verified; hoshimi (`createPlayer`, `search`, `queue`, `LoadType`) external.
+
+```ts
+import { Command, Declare, Options, MessageFlags, type CommandContext, createStringOption } from 'seyfert';
+import { LoadType } from 'hoshimi';
 
 const options = {
-  // v5: option record keys MUST be lowercase (compile-time enforced)
-  query: createStringOption({
-    description: "Enter a song name or url.",
-    required: true,
-  }),
+  query: createStringOption({ description: 'Enter a song name or url.', required: true }),
 };
 
-@Declare({ name: "play", description: "Play music." })
+@Declare({ name: 'play', description: 'Play music.' })
 @Options(options)
 export default class PlayCommand extends Command {
   async run(ctx: CommandContext<typeof options>) {
-    const { options, client, guildId, channelId, member, author } = ctx;
-    const { query } = options;
-
+    const { client, guildId, channelId, member, author } = ctx;
+    const { query } = ctx.options;
     if (!guildId || !member) return;
 
     const voice = await member.voice();
-    if (!voice)
-      return ctx.write({
-        content: "You must be in a voice channel to play music.",
-        flags: MessageFlags.Ephemeral,
-      });
+    if (!voice.channelId)
+      return ctx.write({ content: 'You must be in a voice channel to play music.', flags: MessageFlags.Ephemeral });
 
-    const botVoice = await ctx.me()?.voice();
+    const me = await ctx.me();
+    const botVoice = await me?.voice();
     if (botVoice && botVoice.channelId !== voice.channelId)
-      return ctx.write({
-        content: "You must be in the same voice channel as me.",
-        flags: MessageFlags.Ephemeral,
-      });
+      return ctx.write({ content: 'You must be in the same voice channel as me.', flags: MessageFlags.Ephemeral });
 
-    // external (kazagumo) from here down
-    const player = await client.kazagumo.createPlayer({
+    const player = client.hoshimi.createPlayer({
       guildId,
       textId: channelId,
       voiceId: voice.channelId,
       volume: 100,
     });
+    await player.connect();
 
-    const result = await client.kazagumo.search(query, { requester: author });
-    if (!result.tracks.length) return ctx.write({ content: "No results found!" });
+    const { loadType, tracks, playlist } = await player.search({ query, requester: author });
+    if (loadType === LoadType.Empty || loadType === LoadType.Error)
+      return ctx.write({ content: 'No results found!' });
 
-    if (result.type === "PLAYLIST") player.queue.add(result.tracks);
-    else player.queue.add(result.tracks[0]);
+    if (loadType === LoadType.Playlist) await player.queue.add(tracks);
+    else await player.queue.add(tracks[0]);
 
-    if (!player.playing && !player.paused) player.play();
+    if (!player.playing) await player.play();
 
     return ctx.write({
       content:
-        result.type === "PLAYLIST"
-          ? `Queued ${result.tracks.length} from ${result.playlistName}`
-          : `Queued ${result.tracks[0].title}`,
+        loadType === LoadType.Playlist
+          ? `Queued ${tracks.length} tracks from ${playlist?.info.name}`
+          : `Queued ${tracks[0].info.title}`,
     });
   }
 }
 ```
 
-Note: `member.voice()` and `ctx.me()?.voice()` default to `'flow'` mode (cache → rest); they can throw/reject if the voice state cannot be resolved. Guard accordingly in production.
+### NEW — player controls (skip / pause / volume / loop)
 
-### NEW — A shared voice guard (DRY across music commands)
-
-Pattern, not a new API: factor the "must share a voice channel + a player must exist" check so every control command stays short. Returns the player or `null` after replying.
+Narrow to guild, fetch the live player with `getPlayer(guildId)`, then drive it — all hoshimi:
 
 ```ts
-import { MessageFlags, type GuildCommandContext } from "seyfert";
+import { LoopMode } from 'hoshimi';
 
-// Use GuildCommandContext: guildId is non-null and member/me() are narrowed.
-export async function requirePlayer(ctx: GuildCommandContext) {
-  const member = ctx.member; // non-undefined in a guild context
-  const voice = await member.voice("cache"); // sync cache read; undefined if not in VC
-  if (!voice?.channelId) {
-    await ctx.write({
-      content: "Join a voice channel first.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return null;
-  }
+const player = client.hoshimi.getPlayer(ctx.guildId); // PlayerStructure | undefined
+if (!player) return ctx.write({ content: 'Nothing is playing.' });
 
-  const player = ctx.client.kazagumo.players.get(ctx.guildId); // external
-  if (!player) {
-    await ctx.write({ content: "Nothing is playing.", flags: MessageFlags.Ephemeral });
-    return null;
-  }
-
-  if (player.voiceId && player.voiceId !== voice.channelId) {
-    await ctx.write({
-      content: "You must be in my voice channel.",
-      flags: MessageFlags.Ephemeral,
-    });
-    return null;
-  }
-  return player;
-}
+await player.skip();                     // next track
+await player.setPaused(!player.paused);  // toggle pause
+await player.setVolume(80);              // 0–1000 (Lavalink range)
+player.setLoop(LoopMode.Queue);          // Track=1 | Queue=2 | Off=3
+await player.destroy();                  // leave + clear
 ```
 
-### NEW — skip / pause / stop / volume control commands
-
-Each command runs inside a guild; declare with `Command` and use `ctx.inGuild()` (or the `GuildCommandContext` type) so `guildId` is non-null. kazagumo player methods are external.
+### NEW — now playing (from the queue)
 
 ```ts
-import { Command, Declare, type CommandContext } from "seyfert";
-import { requirePlayer } from "./shared-voice"; // the guard above
+import { Embed } from 'seyfert';
 
-@Declare({ name: "skip", description: "Skip the current track." })
-export default class SkipCommand extends Command {
-  async run(ctx: CommandContext) {
-    if (!ctx.inGuild()) return; // narrows ctx to GuildCommandContext
-    const player = await requirePlayer(ctx);
-    if (!player) return;
+const player = client.hoshimi.getPlayer(ctx.guildId);
+const track = player?.queue.current; // TrackStructure | null
+if (!track) return ctx.write({ content: 'Nothing is playing.' });
 
-    if (!player.queue.current) return ctx.write({ content: "Nothing to skip." });
-    const title = player.queue.current.title;
-    player.skip(); // external
-    return ctx.write({ content: `Skipped **${title}**.` });
-  }
-}
+const embed = new Embed().setTitle('Now Playing').setDescription(`[${track.info.title}](${track.info.uri})`);
+return ctx.write({ embeds: [embed] });
 ```
 
-```ts
-import { Command, Declare, Options, createNumberOption, type CommandContext } from "seyfert";
-import { requirePlayer } from "./shared-voice";
+### NEW — manager events → post to the text channel
 
-const options = {
-  // lowercase key (v5); numeric option -> autocomplete/choices must be numbers
-  percent: createNumberOption({
-    description: "Volume 0-200",
-    required: true,
-    min_value: 0,
-    max_value: 200,
-  }),
-};
-
-@Declare({ name: "volume", description: "Set playback volume." })
-@Options(options)
-export default class VolumeCommand extends Command {
-  async run(ctx: CommandContext<typeof options>) {
-    if (!ctx.inGuild()) return;
-    const player = await requirePlayer(ctx);
-    if (!player) return;
-
-    player.setVolume(ctx.options.percent); // external
-    return ctx.write({ content: `Volume set to ${ctx.options.percent}%.` });
-  }
-}
-```
+hoshimi's emitter (external) drives "now playing" / "queue ended". Use the core `client.messages.write` shorter to send to the player's stored `textId`. Wire once, near the bootstrap. Event `track` params can be `null`.
 
 ```ts
-import { Command, Declare, type CommandContext } from "seyfert";
-import { requirePlayer } from "./shared-voice";
-
-@Declare({ name: "stop", description: "Stop and leave the channel." })
-export default class StopCommand extends Command {
-  async run(ctx: CommandContext) {
-    if (!ctx.inGuild()) return;
-    const player = await requirePlayer(ctx);
-    if (!player) return;
-
-    player.destroy(); // external: clears queue + leaves voice
-    return ctx.write({ content: "Stopped and left the channel." });
-  }
-}
-```
-
-### NEW — `nowplaying` with an Embed
-
-Builds a Seyfert `Embed` (core) from the kazagumo current track (external).
-
-```ts
-import { Command, Declare, Embed, MessageFlags, type CommandContext } from "seyfert";
-
-@Declare({ name: "nowplaying", description: "Show the current track." })
-export default class NowPlayingCommand extends Command {
-  async run(ctx: CommandContext) {
-    if (!ctx.inGuild()) return;
-
-    const player = ctx.client.kazagumo.players.get(ctx.guildId); // external
-    const track = player?.queue.current;
-    if (!track)
-      return ctx.write({ content: "Nothing is playing.", flags: MessageFlags.Ephemeral });
-
-    const embed = new Embed()
-      .setTitle(track.title)
-      .setURL(track.uri)
-      .setDescription(`Requested by ${track.requester}`)
-      .setThumbnail(track.thumbnail ?? undefined)
-      .addFields({ name: "Queue", value: `${player.queue.length} track(s) waiting` })
-      .setColor("Blurple");
-
-    return ctx.write({ embeds: [embed] });
-  }
-}
-```
-
-### NEW — kazagumo player events → post to the text channel
-
-kazagumo's own emitter (external) drives "now playing" / "queue ended" messages. Use the Seyfert `client.messages.write` shorter to send to the stored `textId`. Wire this once, near the bootstrap.
-
-```ts
-// in index.ts after the Kazagumo instance is created
-client.kazagumo.on("playerStart", (player, track) => {
-  if (player.textId)
-    client.messages.write(player.textId, { content: `Now playing: **${track.title}**` });
+// in index.ts after the Hoshimi instance is created
+client.hoshimi.on('trackStart', (player, track) => {
+  if (player.textId && track) client.messages.write(player.textId, { content: `Now playing: ${track.info.title}` });
 });
-
-client.kazagumo.on("playerEmpty", (player) => {
-  if (player.textId)
-    client.messages.write(player.textId, { content: "Queue ended. Leaving." });
-  player.destroy(); // external: leave when idle
+client.hoshimi.on('queueEnd', (player) => {
+  if (player.textId) client.messages.write(player.textId, { content: 'Queue ended.' });
 });
 ```
 
-`client.messages.write(channelId, body)` is core (`MessageShorter`, `src/structures/`); the `playerStart`/`playerEmpty` events and `track` shape are kazagumo's (external).
-
-### NEW — auto-leave when the channel empties (Seyfert event)
-
-A core `voiceStateUpdate` event listener that destroys the player if the bot is left alone. Uses `createEvent` — note v5 custom-event handlers have no trailing `shardId`, but gateway events like this still pass `(payload, client)`.
-
-```ts
-// src/events/voiceLeave.ts
-import { createEvent } from "seyfert";
-
-export default createEvent({
-  data: { name: "voiceStateUpdate" },
-  async run([newState, oldState], client) {
-    const guildId = newState?.guildId ?? oldState?.guildId;
-    if (!guildId) return;
-
-    const player = client.kazagumo.players.get(guildId); // external
-    if (!player?.voiceId) return;
-
-    // Count non-bot members in the bot's voice channel (cache read).
-    const states = await client.cache.voiceStates?.values(guildId);
-    const humans = (states ?? []).filter(
-      (s) => s.channelId === player.voiceId,
-    );
-    if (humans.length <= 1) player.destroy(); // only the bot remains
-  },
-});
-```
-
-`voiceStateUpdate` fires `[VoiceState, VoiceState | undefined]` (new, then old). `client.cache.voiceStates` is core but requires the `GuildVoiceStates` intent AND voice-state caching enabled; the exact `.values()` shape depends on your cache adapter — verify in-project.
-
-## Doc vs Source Corrections
-
-- Import style: the MDX splits imports into two `from "seyfert"` statements and lists `MessageFlags` separately. Source confirms a single barrel works — `MessageFlags`, the decorators, `createStringOption`, `Embed`, `createEvent`, and `CommandContext` are all exported from the `seyfert` root. Consolidated in the examples. (cosmetic; doc not wrong, just split)
-- `send` callback signature: doc is correct against source — `ShardManager.send(shardId: number, payload)` takes the numeric shard id first (`src/websocket/discord/sharder.ts:299`), which is why `calculateShardId(guildId)` is called inside. Flagged because it is easy to misread as `send(guildId, payload)`.
-- v5 deltas applied to the added examples (NOT in the original MDX, which only shows `play`): lowercase option keys are now compile-time enforced; numeric options (`createNumberOption`) require numeric `choices`/autocomplete values; `ctx.inGuild()` narrows to `GuildCommandContext` so `guildId`/`member`/`me()` are non-undefined; `createEvent`'s `run` is `Awaitable<unknown>` and custom (non-gateway) handlers lost the trailing `shardId`.
-- The kazagumo/shoukaku surface (`Kazagumo`, `Connectors.Seyfert`, `createPlayer`, `search`, `players.get`, `player.skip/destroy/setVolume`, events, queue/track shapes) is external and unverifiable against core Seyfert — verify against the installed package versions.
-
-## Source Anchors
-
-- `src/index.ts` (root barrel: re-exports `./commands`, `./types`, `./builders`; defines `createEvent`)
-- `src/client/client.ts` (`Client`, `gateway` field)
-- `src/websocket/discord/sharder.ts` (`calculateShardId`, `send`, `joinVoice`, `leaveVoice`)
-- `src/client/base.ts` (`uploadCommands`)
-- `src/commands/applications/options.ts` (`createStringOption`, `createNumberOption`)
-- `src/commands/applications/chatcontext.ts` (`CommandContext`, `me`, `write`, `inGuild`, getters)
-- `src/structures/GuildMember.ts` (`voice`)
-- `src/builders/Embed.ts` (`Embed`)
-- `src/types/payloads/channel.ts` (`MessageFlags`)
-
-## Agent Guidance
-
-- Use when adding music/voice playback to a Seyfert bot. Seyfert itself only provides the gateway and command plumbing; pick a Lavalink client (kazagumo here, or lavalink-client / poru) and run a Lavalink server (the `localhost:2333` node).
-- The single mandatory Seyfert integration point is the `send` callback: `(guildId, payload) => client.gateway.send(client.gateway.calculateShardId(guildId), payload)`. Get this wrong and voice connections silently never establish.
-- Add `declare module "seyfert" { interface Client { kazagumo: Kazagumo } }` so `client.kazagumo` is typed everywhere (commands, events). This augments the `Client` class directly and is separate from the v5 `SeyfertRegistry` augmentation. Requires the declare-module setup to be loaded — see learn/getting-started/declare-module.
-- Ensure the `GuildVoiceStates` gateway intent is enabled (in `seyfert.config`/client intents) or `member.voice()`, the bot's voice state, and the auto-leave cache read will not resolve.
+`client.messages.write(channelId, body)` is core (`MessageShorter`, `src/structures/`); the `trackStart` / `queueEnd` events and `track` shape are hoshimi's (external).
 
 ## Common patterns / gotchas
 
-- **Narrow to guild early.** Music is guild-only. Call `if (!ctx.inGuild()) return;` (or type the handler as `GuildCommandContext`) so `guildId` is `string` and `member`/`ctx.me()` are non-undefined — no `!guildId || !member` boilerplate, no `?.` everywhere.
-- **`voice()` mode choice.** `member.voice('cache')` is a synchronous cache read (`VoiceStateStructure | undefined`); `member.voice()` defaults to `'flow'` (cache → REST) and returns a Promise that can reject. Prefer `'cache'` in hot paths/guards; use `'flow'` only when you must hit REST.
-- **`write`/`editOrReply` return `void`** unless you pass `withResponse: true` (v5). Don't assign the result expecting a `Message` without the flag.
-- **Lowercase option keys + typed numeric choices** are compile-time errors in v5. `createNumberOption`/`createIntegerOption` autocomplete and `choices` values must be numbers; mark `choices`/`channel_types` arrays `as const`.
-- **Player lifecycle is the library's, not Seyfert's.** Creating a player joins voice via your `send` callback; `player.destroy()` leaves and clears the queue. If you ever bypass the library, Seyfert exposes `client.gateway.joinVoice(...)` / `leaveVoice(...)` directly.
-- **Always `player.destroy()` on empty/idle** (via `playerEmpty` or a `voiceStateUpdate` auto-leave) so the bot doesn't linger in empty channels.
-- **Pin versions.** `kazagumo` + `shoukaku` APIs (`createPlayer`, `search`, result `type`/`playlistName`, event names) change across majors and are not guaranteed by core Seyfert. Verify them against the installed packages in the target project.
+- **`GuildVoiceStates` intent is mandatory** — without it `member.voice()` never resolves and hoshimi can't track voice. `member.voice()` defaults to `'flow'` (cache→REST) and may reject; prefer `member.voice('cache')` inside guards.
+- **Narrow to guild early.** Music is guild-only — `if (!ctx.inGuild()) return;` (or type the handler as `GuildCommandContext`) so `guildId`/`member`/`ctx.me()` are non-undefined; no `?.` sprinkling.
+- **`createPlayer` is sync, `connect` is async.** `const player = client.hoshimi.createPlayer({...}); await player.connect();` — then `search`/`queue.add`/`play`.
+- **`sendPayload` needs the shard id first.** `this.gateway.send(this.gateway.calculateShardId(guildId), payload)` — `calculateShardId` maps the guild to its shard; passing the guild id directly is wrong.
+- **Type the manager on `SeyfertRegistry.client`, not `interface Client`.** The v4/kazagumo pattern (`interface Client { kazagumo }`) is gone; use the `Client` subclass + `ParseClient<MusicClient>` or the `& { hoshimi: Hoshimi }` intersection so `client.hoshimi` is typed in every command/event.
+- **Pin the version.** hoshimi is pre-1.0 (`0.3.x-dev`); options/enums/events shift across builds. Verify `SearchSources`, `LoadType`, event names, and player methods against the installed package.
+
+## Doc vs Source Corrections
+
+- **`SearchEngines` / `defaultSearchEngine` do not exist.** The upstream MDX imports `SearchEngines` and passes `defaultSearchEngine: SearchEngines.Youtube`, but hoshimi's type exports have **no `SearchEngines`** — the enum is `SearchSources` and the option is `defaultSearchSource` (`HoshimiOptions.defaultSearchSource?: SearchSource`, default `SearchSources.Youtube`). Confirmed against `dist/index.d.cts` (the `Hoshimi` constructor docstring itself uses `defaultSearchSource: SearchSources.Youtube`). Use `SearchSources` / `defaultSearchSource`.
+- **Augmentation moved to `SeyfertRegistry.client`.** The old recipe augmented `interface Client { kazagumo: Kazagumo }` directly; the v5 hoshimi setup types the manager through `SeyfertRegistry.client` (subclass or intersection). Augmenting a bare `interface Client` no longer wires `client.hoshimi` typing in v5.
+- **`SearchSources` values are Lavalink search prefixes** (`Youtube="ytsearch"`, `Spotify="spsearch"`, …) and depend on server-side plugins (youtube-source, lava-src) being installed on the Lavalink node.
+
+## Source Anchors
+
+- `hoshimi` `dist/index.d.cts` (`hoshimi@0.3.10-dev`): `Hoshimi` class (`updateVoiceState`, `init`, `createPlayer`, `getPlayer`, `search`), `HoshimiOptions`, `PlayerOptions`, `Player`/`Queue`, `SearchOptions`/`SearchQuery`/`QueryResult`, enums `LoadType`/`LoopMode`/`SearchSources`/`EventNames`, packet types `VoicePacket`/`VoiceServer`/`VoiceState`/`ChannelDeletePacket`.
+- Real-world Seyfert + hoshimi bot usage: a `Hoshimi` subclass with options, `raw`-event forwarding to `updateVoiceState`, a `play` command (`createPlayer` → `connect` → `search` → `queue.add` → `play`), and event listeners keyed by `EventNames`.
+- Core Seyfert: `src/structures/` (`client.messages.write` `MessageShorter`), `member.voice()` on the member structure, `ctx.me()` / `ctx.inGuild()` on the command context.
+
+## Agent Guidance
+
+- Use when adding music/voice playback to a Seyfert bot. Seyfert only provides the gateway + command plumbing; hoshimi is the Lavalink v4 client and needs a running Lavalink node (`localhost:2333` in examples).
+- Type `client.hoshimi` via `SeyfertRegistry.client` (subclass `ParseClient<MusicClient>` or `ParseClient<Client<true>> & { hoshimi: Hoshimi }`). Requires the declare-module setup to be loaded — see `learn/getting-started/declare-module`.
+- Import runtime values (`Hoshimi`, `SearchSources`, `LoadType`, `LoopMode`, `EventNames`) and types (`PlayerStructure`, `TrackStructure`, `QueryResult`, packet types) from `'hoshimi'` — none of these are on `'seyfert'`.
+- Do NOT copy the docs' `SearchEngines` / `defaultSearchEngine`; they don't exist — use `SearchSources` / `defaultSearchSource`.
+- Always `player.destroy()` when the channel empties or on `queueEnd` if you don't idle; forward the `raw` event and call `init()` on `botReady`, or nothing plays.

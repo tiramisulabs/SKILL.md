@@ -91,7 +91,7 @@ export default class CreateCommand extends SubCommand {
 Because `@AutoLoad` scans `dirname(parentFile)` **recursively**, the parent command has to be isolated in a
 dedicated folder; otherwise it will treat every unrelated command file that happens to share its directory as one
 of its subcommands. Give the parent a folder named after the command, put the parent file inside it, and keep the
-subcommands in a `commands/` subfolder (the community/`stelle` convention — the recursive scan reaches them):
+subcommands in a `commands/` subfolder (a common community convention — the recursive scan reaches them):
 
 ```
 commands/
