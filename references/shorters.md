@@ -222,34 +222,35 @@ for you. Non-exhaustive; see `pages/learn/tips/structures.md` for the full surfa
 - **User**: `user.fetch()`, `user.avatarURL()`, `user.dm()` / `user.write(body)`.
 - **Guild / Role / others**: `guild.fetch()`, `guild.members.*`, `role.edit()`, `role.delete()`, etc.
 
-## From discord.js to shorters (real Ganyu examples)
+## Object resolution vs id-based shorters
 
-The [Ganyu](https://github.com/Ganyu-Studios/Ganyu) bot has a discord.js `main` branch and a Seyfert
-`seyfert-claude-port` branch. The Seyfert port collapses multi-step djs REST dances into single shorter
-calls. Concrete before/after:
+Many Discord libraries make you materialize an intermediate gateway object (`Channel`, `Guild`,
+`GuildMember`) before you can act on it. Seyfert shorters collapse those multi-step REST dances into a
+single id-based call. Concrete before/after:
 
-**Send / log to a channel by id.** djs fetches the channel and narrows its type just to reach `.send`;
-the shorter writes straight to the snowflake already in config (no extra REST round-trip):
+**Send / log to a channel by id.** The object-resolution style fetches the channel and narrows its type
+just to reach `.send`; the shorter writes straight to the snowflake already in config (no extra REST
+round-trip):
 
 ```ts
-// discord.js (main): fetch → narrow → send
-const channel = await client.channels.fetch(client.config.channels.reports);
+// object resolution: fetch → narrow → send
+const channel = await client.channels.fetch(config.channels.reports);
 if (channel?.type !== ChannelType.GuildText) return;
 await channel.send({ embeds: [embed], components: [row] });
 
-// seyfert (port): one id-based call
-await client.messages.write(client.config.channels.reports, { embeds: [embed], components: [row] });
+// seyfert: one id-based call
+await client.messages.write(config.channels.reports, { embeds: [embed], components: [row] });
 ```
 
-**Fetch a member by id.** djs needs a materialized `interaction.guild` first; the shorter takes ids directly:
+**Fetch a member by id.** The object-resolution style needs a materialized `interaction.guild` first; the shorter takes ids directly:
 
 ```ts
-// discord.js (main)
+// object resolution
 const { guild } = interaction;
 if (!guild) return;
 const member = await guild.members.fetch({ user }).catch(() => null);
 
-// seyfert (port)
+// seyfert
 if (!ctx.guildId) return;
 const member = await ctx.client.members.fetch(ctx.guildId, user.id).catch(() => null);
 ```
@@ -257,25 +258,25 @@ const member = await ctx.client.members.fetch(ctx.guildId, user.id).catch(() => 
 **List a guild's roles.** No live `Guild` object, no `guild.roles.everyone` (everyone === `guildId`), no `PermissionsBitField` import:
 
 ```ts
-// discord.js (main): read the cache off a live guild
+// object resolution: read the cache off a live guild
 const roles = guild.roles.cache
   .filter(r => !r.permissions.has(PermissionsBitField.Flags.Administrator) && !r.managed && r !== guild.roles.everyone)
   .sort((a, b) => b.position - a.position);
 
-// seyfert (port): by id, returns an array
+// seyfert: by id, returns an array
 const roles = (await client.roles.list(guildId))
   .filter(r => !r.permissions.has('Administrator') && !r.managed && r.id !== guildId)
   .sort((a, b) => b.position - a.position);
 ```
 
-More spots where the port dropped an intermediate object for a single id-based shorter call:
+More spots where an intermediate object collapses to a single id-based shorter call:
 
 - **DM a user** — `user.send(...)` → `user.write({ content })` (structure helper opens the DM implicitly).
 - **Edit a channel overwrite** — `channel.permissionOverwrites.edit(id, {...})` → `client.channels.editOverwrite(channelId, targetId, { type, allow: [...] }, { guildId })` (no fetched `GuildChannel` needed).
 - **Create a channel** — `guild.channels.create({...})` → `client.guilds.channels.create(guildId, {...})` (no live `Guild`).
 - **Fetch a message** — `guildChannel.messages.fetch(id)` → `client.messages.fetch(messageId, channelId)` (both ids, no channel object).
 
-> Pattern: discord.js makes you resolve an intermediate gateway object (`Channel`, `Guild`, `GuildMember`)
+> Pattern: the object-resolution style makes you resolve an intermediate gateway object (`Channel`, `Guild`, `GuildMember`)
 > and call a method on *it*; Seyfert shorters take the raw snowflake ids you already have. Fewer lines,
 > one fewer round-trip, no `ChannelType` narrowing just to satisfy a `.send`.
 

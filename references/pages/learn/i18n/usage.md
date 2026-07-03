@@ -96,7 +96,7 @@ import { Command, GroupsT } from 'seyfert';
 @GroupsT({
   // key = the group name created on the parent command (via @Group on subcommands)
   supremacy: {
-    defaultDescription: 'Ganyu Supremacy.', // required
+    defaultDescription: 'Supremacy group.', // required
     name: 'my-command.group.name',          // optional dot-path
     description: 'my-command.group.desc',    // optional dot-path
     aliases: ['sup'],                        // optional prefix-command aliases
@@ -137,8 +137,8 @@ const options = {
     },
     choices: [
       // choice-level locales = a single dot-path STRING (localizes the choice name)
-      { name: 'Ganyu', value: 'ganyu', locales: 'my-command.choices.ganyu' },
-      { name: 'Hu Tao', value: 'hutao', locales: 'my-command.choices.hutao' },
+      { name: 'Alpha', value: 'alpha', locales: 'my-command.choices.alpha' },
+      { name: 'Beta', value: 'beta', locales: 'my-command.choices.beta' },
     ] as const, // choices/channel_types are readonly in v5 — use `as const`
   }),
 };
