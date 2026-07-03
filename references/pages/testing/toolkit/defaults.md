@@ -10,7 +10,7 @@ How to organize a real mock-bot test suite with `@slipher/testing`, the common
 pitfalls, and the package's pre-1.0 defaults (single test user, strict REST,
 newest-first messages, throw-on-handler-error) and scope.
 
-`@slipher/testing` is an EXTERNAL package — it is NOT part of seyfert-core. Every
+`@slipher/testing` is an EXTERNAL package — it is NOT part of core Seyfert. Every
 toolkit symbol below (`createMockBot`, the `bot.*` dispatchers, `bot.world`,
 `bot.rest.intercept`, the `TEST_*` ids, `onUnhandledRest`, `onCommandError`) is
 **documentation-authoritative** and must be verified against the version installed
@@ -20,7 +20,7 @@ in the target project. The core seyfert surface the toolkit dispatches against �
 
 ## Key APIs (verified)
 
-EXTERNAL (`@slipher/testing`, verify version in target project — NOT in seyfert-core):
+EXTERNAL (`@slipher/testing`, verify version in target project — NOT in core Seyfert):
 
 - `createMockBot({ commands?, loadFromConfig?, onUnhandledRest?, onCommandError?, ... })`
   → an async-disposable mock bot (`await using bot = await createMockBot(...)`).
@@ -312,7 +312,7 @@ through the captured reply / recorded action.
 - World access is three readers — `bot.world.get.*` (throws on 0/many),
   `bot.world.query.*` (one or `undefined`), `bot.world.all.*` (array) — plus
   `snapshot()`/`diff()`. The earlier note described `bot.world` only generically.
-- `@slipher/testing` is not in seyfert-core, so its API cannot be diffed against
+- `@slipher/testing` is not in core Seyfert, so its API cannot be diffed against
   `./src`; treat the MDX as authoritative and pin behavior to the installed version.
 - Default command-error behavior is unambiguous: `onCommandError: 'throw'` rejects the
   `Dispatch`; `'capture'` puts the error on `result.error`. No real conflict.

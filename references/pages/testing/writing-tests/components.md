@@ -41,7 +41,7 @@ Global, file-based component handler (alternative to collectors — survives res
 - `middlewares: readonly (keyof ResolvedRegisteredMiddlewares)[] = []` (readonly tuple).
 - Hooks: `onBeforeMiddlewares`, `onMiddlewaresError(ctx, error, metadata)`, `onRunError(ctx, error)`, `onAfterRun(ctx, error)`, and `onInternalError(client, component, error?)` — note the **`component` param before `error`** (v5).
 
-External toolkit APIs (from `@slipher/testing`, NOT in seyfert-core — doc-authoritative, verify version in target project):
+External toolkit APIs (from `@slipher/testing`, NOT in core Seyfert — doc-authoritative, verify version in target project):
 
 - `createMockBot({ commands: [...] })` → disposable bot (`await using`).
 - `bot.slash({ name })`, `bot.clickButton(customId, opts?)`, `bot.selectMenu(customId, values, opts?)`, `bot.lastSentMessage()`.
@@ -220,7 +220,7 @@ await interaction.update({ content: 'Got it' });
   the `update` vs `write` distinction.
 - `@slipher/testing` toolkit surface (`createMockBot`, `clickButton`, `selectMenu`,
   `lastSentMessage`, `selectMenuInteraction`, `dispatchInteraction`, `source`/`componentType`/
-  `resolved`) cannot be verified here — not in seyfert-core. Treat the MDX as authoritative and
+  `resolved`) cannot be verified here — not in core Seyfert. Treat the MDX as authoritative and
   pin/verify the installed version in the consuming project.
 
 ## Source Anchors
@@ -233,12 +233,12 @@ await interaction.update({ content: 'Got it' });
 - src/components/componentcontext.ts (write:96, update:121, deferUpdate:117, fetchResponse:144, message getter:87, NO editResponse)
 - src/components/componentcommand.ts (componentType:17, customId:18, filter:19, run:20, middlewares readonly:33, onInternalError(client, component, error):49)
 - src/index.ts (barrel exports: builders, commands, components, types)
-- tests/plugin-authoring-contract.ts (confirms `@slipher/testing` is NOT a seyfert-core dep)
+- tests/plugin-authoring-contract.ts (confirms `@slipher/testing` is NOT a core Seyfert dep)
 
 ## Agent Guidance
 
 - Use this page when writing Vitest/component tests for a Seyfert bot. The component pipeline
-  (collectors, `ComponentCommand` handlers) is real seyfert-core; only the dispatch harness is
+  (collectors, `ComponentCommand` handlers) is real core Seyfert; only the dispatch harness is
   external.
 - Two handler models: (1) message-scoped **collector** via `createComponentCollector().run(id, cb)`
   (`id` = string | array | RegExp; also `waitFor`, `stop`, `resetTimeouts`, options `timeout`,
@@ -248,4 +248,4 @@ await interaction.update({ content: 'Got it' });
   `ComponentContext.editResponse`; `onInternalError(client, component, error)`; collectors fire
   every matching handler (no `break`).
 - Before relying on toolkit signatures in real code, confirm the installed `@slipher/testing`
-  version — its API is not pinned by seyfert-core.
+  version — its API is not pinned by core Seyfert.

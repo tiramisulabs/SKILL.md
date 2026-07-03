@@ -181,7 +181,7 @@ pnpm add -D @slipher/watcher
 
 ```ts title="src/watcher.ts"
 import { join } from 'node:path';
-import { Watcher } from '@slipher/watcher'; // Watcher class is external; not in seyfert-core
+import { Watcher } from '@slipher/watcher'; // Watcher class is external; not in core Seyfert
 
 const watcher = new Watcher({
   filePath: join(process.cwd(), 'dist', 'index.js'), // built bot entry the worker runs

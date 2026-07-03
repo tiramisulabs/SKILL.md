@@ -1,6 +1,6 @@
 # Page-Level Seyfert v5 Documentation Notes
 
-One Markdown note per supplied docs URL. Each note has a page summary, **source-verified** key APIs and code examples, an explicit **Doc vs Source Corrections** section, the `seyfert-core` source anchors used, and agent guidance. Re-check those anchors against the authoritative Seyfert source defined in `../source-truth.md`.
+One Markdown note per supplied docs URL. Each note has a page summary, **source-verified** key APIs and code examples, an explicit **Doc vs Source Corrections** section, the Seyfert source anchors used, and agent guidance. Re-check those anchors against the authoritative Seyfert source defined in `../source-truth.md`.
 
 Count: 63 page notes plus this index.
 

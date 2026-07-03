@@ -8,11 +8,11 @@ Verification status: Source-verified (core) + external package (@slipher/testing
 
 ## Page Summary
 
-`createMockBot()` boots a *real* Seyfert `Client` in-process with no token, gateway, or network, then drives your real command/component/event/modal classes through the actual Seyfert pipeline (raw `APIInteraction` -> `HandleCommand` -> option resolver -> middlewares -> handler), recording every REST call instead of sending it. Unlike `mockCommandContext()` (which hands `run()` a fake context), the mock bot builds a genuine `CommandContext` exactly as production does. The `createMockBot` API itself lives in the EXTERNAL `@slipher/testing` package — not in seyfert-core — so treat its option names/signatures as doc-authoritative and verify the installed version in the target project. The Seyfert-core surfaces it dispatches against (client, services, plugins, loaders, contexts, REST routes) ARE verified below against `./src`.
+`createMockBot()` boots a *real* Seyfert `Client` in-process with no token, gateway, or network, then drives your real command/component/event/modal classes through the actual Seyfert pipeline (raw `APIInteraction` -> `HandleCommand` -> option resolver -> middlewares -> handler), recording every REST call instead of sending it. Unlike `mockCommandContext()` (which hands `run()` a fake context), the mock bot builds a genuine `CommandContext` exactly as production does. The `createMockBot` API itself lives in the EXTERNAL `@slipher/testing` package — not in core Seyfert — so treat its option names/signatures as doc-authoritative and verify the installed version in the target project. The Seyfert-core surfaces it dispatches against (client, services, plugins, loaders, contexts, REST routes) ARE verified below against `./src`.
 
 ## Key APIs (verified)
 
-External (NOT in seyfert-core — verify version in target project):
+External (NOT in core Seyfert — verify version in target project):
 - `createMockBot(options)` from `@slipher/testing` — async, returns a disposable mock bot (`await using`).
 - Dispatchers: `bot.slash(CommandClass, { options })` (option inference from the class) or `bot.slash({ name, options })` (raw by-name payload); `bot.say(...)` for prefix/message commands.
 - Result shape: `result.content`, `result.deferred`, `result.edits`, `result.followups`, `result.actions`, `result.replies`, `result.reply?.body` (`{ type, data }`), `result.embedView(s)`, `result.embeds`/`result.embed`, `result.components`, `result.component(id)`, `result.textDisplays`, `result.error`.
@@ -265,7 +265,7 @@ await using bot = await createMockBot({
 
 - None for core surfaces — `setServices` `middlewares`, `globalMiddlewares`, `plugins`/`clientOptions`, the loaders, `CommandContext`, `HandleCommand`, and `Routes` all match the doc's usage against `./src`.
 - v5 reminder (not a doc error, but relevant when writing the handlers under test): middleware uses `stop()`/`stop('reason')` (no `pass()`); `setServices({ handleCommand })` takes the `HandleCommand` *constructor*, not an instance; component contexts dropped `editResponse`.
-- `createMockBot` and all `bot.*`/`Dispatch`/`result.*` members are EXTERNAL (`@slipher/testing`) and are NOT present anywhere in `./src` (grep for `createMockBot`/`MockGateway`/`onUnhandledRest`/`simulateGateway` returns no core hits). Do not assume these exist in seyfert-core; pin/verify the toolkit version installed in the consuming project. In particular the exact component/modal dispatcher names (`bot.component(...)`, `.fillModal(...)`) shown above are doc/version-dependent — confirm them in your installed `@slipher/testing`.
+- `createMockBot` and all `bot.*`/`Dispatch`/`result.*` members are EXTERNAL (`@slipher/testing`) and are NOT present anywhere in `./src` (grep for `createMockBot`/`MockGateway`/`onUnhandledRest`/`simulateGateway` returns no core hits). Do not assume these exist in core Seyfert; pin/verify the toolkit version installed in the consuming project. In particular the exact component/modal dispatcher names (`bot.component(...)`, `.fillModal(...)`) shown above are doc/version-dependent — confirm them in your installed `@slipher/testing`.
 
 ## Source Anchors
 
@@ -278,7 +278,7 @@ await using bot = await createMockBot({
 ## Agent Guidance
 
 - Use the mock bot for true end-to-end behavior tests (option parsing, middleware order, error hooks, REST side effects, component/modal flows, plugin lifecycle) where `mockCommandContext()` is too shallow.
-- It is an external dev-dependency: confirm `@slipher/testing` is installed and check its version's option/result shape before relying on specific members — they are not guaranteed by seyfert-core.
+- It is an external dev-dependency: confirm `@slipher/testing` is installed and check its version's option/result shape before relying on specific members — they are not guaranteed by core Seyfert.
 - Awaiting a `Dispatch` guarantees everything `run()` awaited (replies, edits, followups, dispatch actions). Use `dispatch.until(...)` to suspend mid-flight (`response` stays `undefined`), and `waitForAction()` only for fire-and-forget work the command did NOT await.
 - For modal-opening commands always use `.fillModal(...)`/`.timeoutModal()` in the dispatch chain; for prefix tests set `prefixes` (+ `mentionAsPrefix`) and use `bot.say(...)`.
 - When writing the handlers these tests drive, follow v5 context/middleware rules (no `pass()`, no component `editResponse`, response flag controls return value) so the assertions match real behavior.

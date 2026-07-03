@@ -10,11 +10,11 @@ Verification status: Source-verified (core) + external package
 
 The **world** is the in-memory Discord state the `@slipher/testing` mock bot serves instead of talking to Discord: guilds, channels, members, roles, messages. You seed it with `mockWorld()`, register entities, pass it to `createMockBot({ world })`, and assert on the read-only `bot.world` reader after dispatching. Crucially, seeded entities are written into the **real** client cache under `CacheFrom.Test`, so `ctx.guild()`, `ctx.channel()`, `member.voice()`, `client.cache.roles.values()` etc. resolve exactly like production cache hits — no interceptors. Recorded REST actions prove a call *happened*; world state proves *what the bot built*.
 
-The toolkit (`mockWorld`, `createMockBot`, `apiRole`, `permissionBits`, `apiError`, `Routes`, etc.) is an EXTERNAL package NOT in seyfert-core — treat its surface as doc-authoritative and verify the installed version in the target project. The CORE seyfert APIs it dispatches against ARE verified below against ./src.
+The toolkit (`mockWorld`, `createMockBot`, `apiRole`, `permissionBits`, `apiError`, `Routes`, etc.) is an EXTERNAL package NOT in core Seyfert — treat its surface as doc-authoritative and verify the installed version in the target project. The CORE seyfert APIs it dispatches against ARE verified below against ./src.
 
 ## Key APIs (verified)
 
-External toolkit (from `@slipher/testing` — verify version in target project, NOT in seyfert-core):
+External toolkit (from `@slipher/testing` — verify version in target project, NOT in core Seyfert):
 - `mockWorld(): WorldBuilder` — `register*` methods mint entities with defaults, store them, and return them so you can reference their ids later.
 - `createMockBot({ commands, world, onUnhandledRest?, simulateGateway? })` — deep-clones the world (safe to share a builder across tests). `await using bot = ...` for auto-teardown.
 - Builder registrars (scoped — channel/role/member/emoji under a guild; thread/invite/webhook/stage under a channel): `registerGuild`, `registerChannel`, `registerThread`, `registerRole`, `registerMember`, `registerBotMember`, `registerVoiceState`, `registerMessage`, plus `registerEmoji`, `registerSticker`, `registerInvite`, `registerWebhook`, `registerAutoModRule`, `registerScheduledEvent`, `registerGuildTemplate`, `registerSoundboardSound`, `registerStageInstance`, `registerAuditLogEntry`. Registering under an unseeded id throws a descriptive `TypeError`. `registerGuild()` auto-creates `@everyone` (role id == guild id, position 0).
@@ -236,7 +236,7 @@ expect(result.reply?.body.data).toMatchObject({ content: 'Pong!' });
 
 ## Doc vs Source Corrections
 
-- None for the core APIs. `CacheFrom.Test`, `GuildMember.voice()`, `BaseCommandInteraction.guild()/channel()` (with `GuildCommandContext` narrowing), `client.cache.roles.values()`, `client.cache.voiceStates.values()`, and `client.channels.fetchMessages()` all exist and behave as the docs describe (verified against the target project installed `seyfert` package or provided Seyfert source). The entire toolkit surface (`mockWorld`, `createMockBot`, builders, readers, `snapshot`/`diff`, `apiRole`, `permissionBits`, `apiError`, `Routes`, `setData`/`worldData`) lives in the EXTERNAL `@slipher/testing` package and could not be verified against seyfert-core — verify its version/signatures in the target project.
+- None for the core APIs. `CacheFrom.Test`, `GuildMember.voice()`, `BaseCommandInteraction.guild()/channel()` (with `GuildCommandContext` narrowing), `client.cache.roles.values()`, `client.cache.voiceStates.values()`, and `client.channels.fetchMessages()` all exist and behave as the docs describe (verified against the target project installed `seyfert` package or provided Seyfert source). The entire toolkit surface (`mockWorld`, `createMockBot`, builders, readers, `snapshot`/`diff`, `apiRole`, `permissionBits`, `apiError`, `Routes`, `setData`/`worldData`) lives in the EXTERNAL `@slipher/testing` package and could not be verified against core Seyfert — verify its version/signatures in the target project.
 - Note for v5: `member.ban(...)` / `client.members.ban(...)` now take `{ deleteMessageSeconds, reason }` (camelCase, reason inside the object) — reflected in the ban recipe above (changelog: Moderation breaking change).
 
 ## Source Anchors

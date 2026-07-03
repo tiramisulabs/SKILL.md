@@ -1,12 +1,12 @@
 # Testing Seyfert v5 Bots
 
 Scope: how to test a Seyfert bot. The recommended toolkit is **`@slipher/testing`** — an
-**EXTERNAL** package that is **NOT part of seyfert-core**. Its API (`createMockBot`, `bot.*`,
+**EXTERNAL** package that is **NOT part of core Seyfert**. Its API (`createMockBot`, `bot.*`,
 `outcome`, `rendered`, `mockCommandContext`, `mockWorld`, `TEST_*`, `apiUser`, …) is
 **doc-authoritative only**: pin and verify the installed version in the target project before
 relying on exact signatures (it is pre-1.0 and marks parts unstable). Everything the toolkit
 *dispatches against* (commands, events, components, modals, contexts, cache, gateway, builders,
-SeyfertError, middleware) is real seyfert-core and is verified below against `./src`.
+SeyfertError, middleware) is real core Seyfert and is verified below against `./src`.
 
 ## Is the toolkit even installed?
 
@@ -14,7 +14,7 @@ SeyfertError, middleware) is real seyfert-core and is verified below against `./
   tests with the runner's own mocks + `tsc` type checks. Do not invent it.
 - It bundles **no test runner** — bring Vitest / Jest / `node:test`. Requires Seyfert v5 peer dep.
 - Install (per docs): `pnpm add -D @slipher/testing`.
-- **Contributing to seyfert-core itself uses plain Vitest** (`tests/*.test.mts`, config
+- **Contributing to core Seyfert itself uses plain Vitest** (`tests/*.test.mts`, config
   `tests/vitest.config.mts`); `@slipher/testing` is NOT a dependency of this repo. For core
   changes: `pnpm run build`, type-contract scripts, then `pnpm test`. Repo Vitest disables file
   parallelism/isolation (see config below) — follow that even though the toolkit docs say parallel
@@ -436,7 +436,7 @@ describe('builder validation (v5)', () => {
 ## Review checklist
 
 - [ ] Is `@slipher/testing` actually installed for this project's package manager, and its version's
-      API confirmed? (Not part of seyfert-core; do not assume signatures.)
+      API confirmed? (Not part of core Seyfert; do not assume signatures.)
 - [ ] Command/event/component/modal code imports from **root `'seyfert'`**; toolkit + `TEST_*` from
       **`'@slipher/testing'`** — never `Routes`/`HandleCommand` from `'seyfert'` (not runtime/root).
 - [ ] `createEvent` name camelCase; `bot.emit` name UPPERCASE; emit full payloads. Custom events

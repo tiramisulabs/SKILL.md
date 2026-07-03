@@ -8,7 +8,7 @@ Verification status: Source-verified (core Seyfert surface) + EXTERNAL package (
 
 `@slipher/chartjs` is an external official plugin that renders [Chart.js](https://www.chartjs.org/) charts to PNG image buffers using [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) — no headless browser required. You construct a fixed-size `NapiChartjsCanvas`, render a standard Chart.js config to a `Buffer`, then attach it to a message via Seyfert's `AttachmentBuilder` and the `files` array.
 
-Important: it is NOT a `createPlugin`/`definePlugins` runtime plugin (it never touches the `Client` plugin lifecycle). It is a standalone render utility you call inside a command. Its API is documented here from the upstream MDX — it is not part of seyfert-core and cannot be source-verified; confirm the installed version. Every Seyfert-side API it touches (`AttachmentBuilder`, `EmbedBuilder`, `ctx.write`/`ctx.editOrReply` with `files`) IS verified against `./src`.
+Important: it is NOT a `createPlugin`/`definePlugins` runtime plugin (it never touches the `Client` plugin lifecycle). It is a standalone render utility you call inside a command. Its API is documented here from the upstream MDX — it is not part of core Seyfert and cannot be source-verified; confirm the installed version. Every Seyfert-side API it touches (`AttachmentBuilder`, `EmbedBuilder`, `ctx.write`/`ctx.editOrReply` with `files`) IS verified against `./src`.
 
 ## Key APIs (verified)
 
@@ -24,7 +24,7 @@ Core Seyfert APIs the examples use (confirmed in `./src`, all importable from th
 - `ctx.write({ files: [attachment] })` / `ctx.editOrReply({ files: [attachment] })` — standard send/edit paths on `CommandContext`. v5 note: both return `void` unless you pass the response flag (`write(body, true)` / `editOrReply(body, true)`) to fetch the `Message`.
 - `Embed.setImage(url?)` (`src/builders/Embed.ts:106`; the class is exported as `Embed`) — pass `attachment://<filename>` to embed an attached chart inside an embed (Discord references the file in the same `files` array by name).
 
-External `@slipher/chartjs` API (doc-authoritative — NOT in seyfert-core, verify version in target project):
+External `@slipher/chartjs` API (doc-authoritative — NOT in core Seyfert, verify version in target project):
 
 - `NapiChartjsCanvas` — constructed with a single options object (see table below).
 - `canvas.renderToBuffer(configuration)` — renders a standard Chart.js config and returns a PNG `Buffer` ready for `files`. (Synchronous in the MDX example — no `await`.)

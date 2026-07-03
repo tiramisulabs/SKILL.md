@@ -293,5 +293,5 @@ export const databasePlugin = createPlugin({
 - `client` map keys must not collide with reserved client members; `ctx`/`shared`/cache
   resource names are guarded (`assertSafePluginResourceName`, reserved-name sets in
   src/client/plugins/api.ts) and throw on conflict.
-- The DB driver itself (Prisma/Drizzle/Mongoose/…) is NOT part of seyfert-core — verify its
+- The DB driver itself (Prisma/Drizzle/Mongoose/…) is NOT part of core Seyfert — verify its
   version and API in the target project. `DatabaseClient` here is a placeholder.

@@ -11,7 +11,7 @@ This is an index/catalog page. It lists the official packages the Seyfert team m
 - **Adapters** — swap a piece of infrastructure (cache, HTTP server, REST, gateway); passed to their own client options, NOT the `plugins` array.
 - **Utilities** — helpers you import and call directly; no plugin lifecycle.
 
-A plugin can use adapters and utilities internally — they only become "installed" when you pass a plugin object to the `plugins` option. None of these packages live in seyfert-core, so their per-package APIs are doc-authoritative and must be version-verified in the consuming project. What IS in seyfert-core (and fully verified below) is the integration shape: how a plugin object is authored (`createPlugin`/`createPluginFactory`) and passed to the client (`definePlugins`).
+A plugin can use adapters and utilities internally — they only become "installed" when you pass a plugin object to the `plugins` option. None of these packages live in core Seyfert, so their per-package APIs are doc-authoritative and must be version-verified in the consuming project. What IS in core Seyfert (and fully verified below) is the integration shape: how a plugin object is authored (`createPlugin`/`createPluginFactory`) and passed to the client (`definePlugins`).
 
 ## Catalog (from MDX — external packages, verify versions in target project)
 
@@ -36,7 +36,7 @@ Utilities (import and call directly):
 
 Note: package names/scope are doc-authoritative; this index is the only place they appear. Always confirm the installed version and exact export surface against the package's own typings in the consuming project. The MDX page itself contains no runnable code — it points authors at `/docs/plugins/building/creating-plugins` to write their own.
 
-## Key APIs (verified — core integration, from seyfert-core)
+## Key APIs (verified — core integration, from core Seyfert)
 
 All exported from root `seyfert` (src/index.ts -> src/client/index.ts:13 `export * from './plugins'`). The public helpers live in `src/client/plugins.ts`; the registry/api/types internals live under `src/client/plugins/`.
 
@@ -198,7 +198,7 @@ const presencePlugin = createPlugin({
 - Catalog grouping fixed to match current MDX (ref seyfert-v5): `yunaforseyfert` is listed under **Plugins** (with a `/yuna` guide link), not Utilities. Utilities are now `@slipher/webhooks`, `@slipher/watcher`, `@slipher/testing`, `@slipher/chartjs`.
 - All core integration APIs and line anchors re-verified against `./src` on the authoritative Seyfert source — no stale/v4 signatures found. `createPlugin` runtime is `return plugin` (240-265); `createPluginFactory` wraps throws via `wrapPluginError` (267-281); `definePlugins` accepts spread-or-array (283-289).
 - `SeyfertRegistry` starts as empty `interface SeyfertRegistry {}` (types.ts:32) and is the single augmentation point in v5 (replaces v4 `UsingClient`/`RegisteredMiddlewares`/`DefaultLocale`, which are now derived).
-- MDX descriptions of the `@slipher` packages cannot be verified against seyfert-core (none are vendored); treated as doc-authoritative — verify versions/exports in the consuming project.
+- MDX descriptions of the `@slipher` packages cannot be verified against core Seyfert (none are vendored); treated as doc-authoritative — verify versions/exports in the consuming project.
 
 ## Source Anchors
 

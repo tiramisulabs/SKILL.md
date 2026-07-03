@@ -8,7 +8,7 @@ Verification status: Source-verified (core) + external package (`@slipher/testin
 
 ## Page Summary
 
-Covers the `@slipher/testing` mock-bot dispatch API: driving raw `APIInteraction`/message payloads and gateway events through the *real* Seyfert pipeline (`HandleCommand`, option resolver, middlewares, REST recorder). Unlike `mockCommandContext()` (which hands `run()` a fake context), the mock bot builds a real `CommandContext` exactly as production does. Dispatchers (`bot.slash`, `bot.autocomplete`, `bot.userMenu`, `bot.clickButton`, `bot.selectMenu`, `bot.fillModal`, `bot.say`, `bot.emit`) return a lazy `Dispatch` that you `await` for the full run or step with `.until(matcher)`. The toolkit (`createMockBot`, dispatch helpers, entity-option builders, `Routes` matcher) is EXTERNAL and not in seyfert-core — verify its version/signatures in the target project. The Seyfert-core surfaces it leans on (`SeyfertRegistry` augmentation, `InteractionResponseType`, command/option/event/middleware pipeline, camelCase event names) ARE verified below against `./src`.
+Covers the `@slipher/testing` mock-bot dispatch API: driving raw `APIInteraction`/message payloads and gateway events through the *real* Seyfert pipeline (`HandleCommand`, option resolver, middlewares, REST recorder). Unlike `mockCommandContext()` (which hands `run()` a fake context), the mock bot builds a real `CommandContext` exactly as production does. Dispatchers (`bot.slash`, `bot.autocomplete`, `bot.userMenu`, `bot.clickButton`, `bot.selectMenu`, `bot.fillModal`, `bot.say`, `bot.emit`) return a lazy `Dispatch` that you `await` for the full run or step with `.until(matcher)`. The toolkit (`createMockBot`, dispatch helpers, entity-option builders, `Routes` matcher) is EXTERNAL and not in core Seyfert — verify its version/signatures in the target project. The Seyfert-core surfaces it leans on (`SeyfertRegistry` augmentation, `InteractionResponseType`, command/option/event/middleware pipeline, camelCase event names) ARE verified below against `./src`.
 
 ## Key APIs (verified)
 
@@ -24,7 +24,7 @@ Core seyfert APIs the toolkit consumes (all importable from `'seyfert'` root):
 - `middlewares('a','b')` typed helper — `src/commands/decorators.ts:184`, `<const T extends readonly MiddlewareKey[]>` — infers the registered name union; pass the result to `@Middlewares([...])`.
 - Event handler names are camelCase. `createEvent({ data: { name } })` takes `ClientNameEvents`, built from raw gateway keys via `ReplaceRegex.camel(x.toLowerCase())` (`src/events/handler.ts:252`), e.g. `'guildMemberAdd'`, `'channelCreate'`.
 
-External (NOT in seyfert-core — doc-authoritative, verify version in target project): `createMockBot`, `TEST_BOT_ID`, `bot.slash/autocomplete/userMenu/clickButton/selectMenu/fillModal/say/emit`, `bot.actor()`, `bot.defaultUser`, `registeredEvents()`, `Dispatch`, `.until()`, `.fillModal()`, `.timeoutModal()`, `waitForAction()`, result views (`result.content`, `result.deferred`, `result.replies`, `result.reply?.body`, `result.edits`, `result.followups`, `result.actions`, `result.embedView(s)`, `result.embed(s)`, `result.component(...)`, `result.components`, `result.textDisplays`), entity-option builders (`apiUser`, `userOption`, `channelOption`, `roleOption`, `mentionableOption`, `attachmentOption`).
+External (NOT in core Seyfert — doc-authoritative, verify version in target project): `createMockBot`, `TEST_BOT_ID`, `bot.slash/autocomplete/userMenu/clickButton/selectMenu/fillModal/say/emit`, `bot.actor()`, `bot.defaultUser`, `registeredEvents()`, `Dispatch`, `.until()`, `.fillModal()`, `.timeoutModal()`, `waitForAction()`, result views (`result.content`, `result.deferred`, `result.replies`, `result.reply?.body`, `result.edits`, `result.followups`, `result.actions`, `result.embedView(s)`, `result.embed(s)`, `result.component(...)`, `result.components`, `result.textDisplays`), entity-option builders (`apiUser`, `userOption`, `channelOption`, `roleOption`, `mentionableOption`, `attachmentOption`).
 
 ## Code Examples (verified)
 
@@ -89,7 +89,7 @@ export const middlewares = { auth };
 
 ### 3. Step-through with `.until(...)` (assert the outgoing REST body)
 
-`Routes` is NOT a seyfert-core runtime export (see corrections) — it is the toolkit / `discord-api-types` route matcher, or use a predicate over the recorded action body.
+`Routes` is NOT a core Seyfert runtime export (see corrections) — it is the toolkit / `discord-api-types` route matcher, or use a predicate over the recorded action body.
 
 ```ts
 const dispatch = bot.slash({ name: 'ban', options: { user: userOption(apiUser({ id: '42' })) } });
@@ -218,7 +218,7 @@ expect(result.reply?.body).toMatchObject({ type: InteractionResponseType.Channel
 
 ## Agent Guidance
 
-- Treat this page as EXTERNAL: the dispatch surface lives in `@slipher/testing`. Confirm the package is installed and pin/verify its version before relying on exact signatures; the only hard guarantees from seyfert-core are the augmentation interface (`SeyfertRegistry`), the `InteractionResponseType` enum, `createMiddleware`/`stop` semantics, and the command/event pipeline behavior.
+- Treat this page as EXTERNAL: the dispatch surface lives in `@slipher/testing`. Confirm the package is installed and pin/verify its version before relying on exact signatures; the only hard guarantees from core Seyfert are the augmentation interface (`SeyfertRegistry`), the `InteractionResponseType` enum, `createMiddleware`/`stop` semantics, and the command/event pipeline behavior.
 - When writing the `Routes.ban` matcher, do not auto-suggest `import { Routes } from 'seyfert'` — it will not resolve. Point users to the toolkit's matcher import (or `discord-api-types` `Routes`), or a predicate over the recorded action body.
 - Always author middleware fixtures with v5 `stop()` (not `pass()`); show `createMiddleware(({ context, next, stop }) => ...)`.
 - Use the `*Option(apiUser(...))` builders for entity options, not bare ids.

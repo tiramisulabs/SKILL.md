@@ -12,8 +12,8 @@ build a stand-in `CommandContext` with `mockCommandContext()`, call `run()` dire
 assert against a recorded `responses` array. Use fixtures for pure `run()` logic; switch to
 the mock bot for option parsing, middlewares, permissions, components, or events. The
 toolkit API (`mockCommandContext`, `mockUser`, `ctx.run`, `ctx.responses`,
-`ctx.lastResponse`, `ctx.clearResponses`) is NOT part of seyfert-core — verify its version
-in the target project. The seyfert-core APIs it dispatches against ARE verified below.
+`ctx.lastResponse`, `ctx.clearResponses`) is NOT part of core Seyfert — verify its version
+in the target project. The core Seyfert APIs it dispatches against ARE verified below.
 
 ## Key APIs (verified)
 
@@ -37,7 +37,7 @@ Core seyfert APIs (all root-importable from `'seyfert'`):
   `decorators`, `applications/chat`, `applications/chatcontext`, `applications/options`
   (src/commands/index.ts). No deep imports needed for any of the above.
 
-External toolkit APIs (`@slipher/testing`, doc-authoritative, NOT in seyfert-core — verify version in target project):
+External toolkit APIs (`@slipher/testing`, doc-authoritative, NOT in core Seyfert — verify version in target project):
 
 - `mockCommandContext(CommandClass, { options })` — preferred class form; infers option
   types from the class, derives name from `@Declare`, binds the command so `ctx.run()` takes
@@ -268,7 +268,7 @@ test('shows the fetched balance', async () => {
   `ctx.write`/`editOrReply`/`editResponse`/`followup`/`modal` all match the docs and are
   root-importable from `'seyfert'`. Signatures confirmed against chatcontext.ts.
 - Note (not a correction): the `mockCommandContext`/`mockUser`/`ctx.responses`/`ctx.run`
-  surface is entirely from `@slipher/testing` and cannot be validated against seyfert-core.
+  surface is entirely from `@slipher/testing` and cannot be validated against core Seyfert.
   Confirm names/signatures against the installed toolkit version before relying on them.
 - v5 reminder enforced in examples above: lowercase option keys, `as const` on `choices`,
   and `void` returns from `write`/`editOrReply` (assert on `ctx.responses`, not the return).
@@ -299,6 +299,6 @@ test('shows the fetched balance', async () => {
   it infers option types and binds the command, removing manual generics and casts.
 - Gotcha: `@slipher/testing` is a third-party package, NOT shipped by seyfert. It is not in
   this repo. Install it separately and pin/verify its version in the target project; its API
-  may drift independently of seyfert-core.
+  may drift independently of core Seyfert.
 - The command file used in tests must be the REAL command (real `@Declare`/`@Options`); do
   not rewrite it for testing. The default-export class is imported directly.

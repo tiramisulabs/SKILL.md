@@ -14,7 +14,7 @@ Source-aware guidance for Seyfert v5 Discord bots and for the Seyfert framework 
 1. **Inspect the project first:** `package.json` + lockfile (confirm the installed `seyfert` version and any `@slipher/*`, `yunaforseyfert`, lavalink deps), `seyfert.config.*`, `tsconfig.json`, the command/component/event/lang folders, module augmentations (`declare module 'seyfert'`), and existing tests. If `seyfert` is below `5.0.0`, apply the Version Scope rule in `references/source-truth.md`.
 2. **Prefer root imports from `seyfert`.** Use a deep import only for an API not root-exported in the installed version — known case: custom prefix parsers via `seyfert/lib/commands/handle` (`HandleCommand`). Before adding a deep import, check `lib/index.d.ts` / `src/index.ts` / the barrels.
 3. **Verify core APIs against the target project's installed `node_modules/seyfert`, the current Seyfert source checkout, or source explicitly provided by the user before copying any docs example.** Docs can be ahead of (or behind) the installed build.
-4. **External packages** (`@slipher/cooldown|scheduler|logger|queues|chartjs`, `@slipher/testing`, `yunaforseyfert`, lavalink clients) are doc-authoritative but **NOT** in `seyfert-core` — verify availability and version in the target project.
+4. **External packages** (`@slipher/cooldown|scheduler|logger|queues|chartjs`, `@slipher/testing`, `yunaforseyfert`, lavalink clients) are doc-authoritative but **NOT** in the `seyfert` package — verify availability and version in the target project.
 
 `references/source-truth.md` holds the curated, source-cited corrections and local landmarks — **read it before trusting any docs example for a typed API.**
 
@@ -147,7 +147,7 @@ Open only what the task needs:
 
 ## Verification
 
-- **`seyfert-core` (library/source) changes:** run the narrowest relevant test, then `pnpm test` when practical (the repo's test script builds, runs type contracts, then Vitest).
+- **Seyfert core (library/source) changes:** run the narrowest relevant test, then `pnpm test` when practical (the repo's test script builds, runs type contracts, then Vitest).
 - **Bot projects:** `tsc --noEmit` + existing unit/integration tests; if command schemas changed, exercise `uploadCommands` behavior explicitly.
 - **Plugins:** test lifecycle (`register`/`setup`/`teardown`), ordering/imports/requirements, diagnostics, and type augmentation.
 - **HTTP/serverless:** verify request handling, public-key/adapter wiring, and no reliance on filesystem-loaded folders the platform can't read.

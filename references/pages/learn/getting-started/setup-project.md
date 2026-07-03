@@ -224,5 +224,5 @@ BOT_PUBLIC_KEY=...
 - v5 augmentation deltas: do NOT augment `UsingClient` / `RegisteredMiddlewares` / `DefaultLocale` directly (derived), and `ParseMiddlewares` was removed — use `typeof middlewares`.
 - `locations.base` must point at the directory that actually contains your command/event/component/lang folders: `dist` after a `tsc` build, `src` when running TS directly under bun/tsx.
 - `start()` loads handlers and (gateway) connects but never registers commands with Discord. Call `uploadCommands()` explicitly (commonly inside a `botReady` event) to publish them.
-- HTTP bots need an adapter: `@slipher/uws-adapter` or `@slipher/generic-adapter` are EXTERNAL packages (not in seyfert-core) — verify their versions in the target project. The core `HttpClient`/`config.http` API is verified here. Cloudflare Workers have a dedicated recipe; config is picked up via `_seyfertCfWorkerConfig`.
+- HTTP bots need an adapter: `@slipher/uws-adapter` or `@slipher/generic-adapter` are EXTERNAL packages (not in core Seyfert) — verify their versions in the target project. The core `HttpClient`/`config.http` API is verified here. Cloudflare Workers have a dedicated recipe; config is picked up via `_seyfertCfWorkerConfig`.
 - For tests or env-only deployments, pass `getRC` in the client options to skip the `seyfert.config` file entirely.

@@ -347,7 +347,7 @@ Errors (`errors.ts`, both root-exported): `SeyfertPluginError` (fields `plugin`,
 
 ## Official plugins (EXTERNAL — `@slipher/*`, doc-authoritative, VERSION-VERIFY)
 
-None vendored in seyfert-core. Confirm package name/version/exports against installed typings. Adapters (cache/HTTP/REST/gateway) are NOT plugins — they go to their own client options, not `plugins`.
+None vendored in core Seyfert. Confirm package name/version/exports against installed typings. Adapters (cache/HTTP/REST/gateway) are NOT plugins — they go to their own client options, not `plugins`.
 
 - `@slipher/cooldown` — `cooldown({ middleware?: true | { global?, name?, message? } })`. Decorators `@Cooldown.user|guild|channel|global|custom(interval, { uses?, group? }?)` or `@Cooldown({ type, interval, uses?, group? })`. Manager on `client.cooldown`/`ctx.cooldown`: zero-arg `consume()`/`check()` (in-handler only; throw outside) or explicit `{ name, target, guildId?, cost? }`; `reset(...)`. `check`/`consume` return `undefined` when the command has no cooldown. If `middleware` is an object, the name isn't inferred — augment `SeyfertRegistry.middlewares` with `CooldownMiddlewares<'cooldown'>`.
 

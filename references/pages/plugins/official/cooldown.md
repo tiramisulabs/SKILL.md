@@ -8,14 +8,14 @@ Verification status: Source-verified (core) + external package
 
 ## Page Summary
 
-`@slipher/cooldown` is an EXTERNAL plugin (not part of seyfert-core) that adds per-command
+`@slipher/cooldown` is an EXTERNAL plugin (not part of core Seyfert) that adds per-command
 cooldowns scoped per user, guild, channel, or globally. You declare a cooldown with the
 `@Cooldown` decorator (or its scope shortcuts), and either let the bundled `cooldown`
 middleware gate commands automatically or drive the `CooldownManager` (`client.cooldown` /
 `ctx.cooldown`) directly. Storage is backed by the client cache adapter, with an optional
 atomic Redis-style `eval` fast path for `consume`. Requires Seyfert v5; keeps `seyfert` as a
 peer dependency. Verify the package version/API in the target project — the package API below
-is authoritative from the MDX, not from seyfert-core source.
+is authoritative from the MDX, not from Seyfert source.
 
 ## Key APIs (verified)
 
@@ -258,7 +258,7 @@ Gotchas (all verified against the MDX + the core surfaces below):
   `Middlewares(['cooldown'])` decorator all match the MDX against ./src.
 - The entire `@slipher/cooldown` surface (decorators, `CooldownManager`, `CooldownResult`,
   `CooldownMiddlewares`, atomic adapter) is EXTERNAL and cannot be verified against
-  seyfert-core — treat the MDX as authoritative and verify the installed package version.
+  core Seyfert — treat the MDX as authoritative and verify the installed package version.
 
 ## Source Anchors
 
@@ -278,7 +278,7 @@ Gotchas (all verified against the MDX + the core surfaces below):
 
 - This is an external plugin: before editing production code, confirm `@slipher/cooldown` is
   installed and check its version — the option names/signatures here come from the docs, not
-  from seyfert-core.
+  from core Seyfert.
 - Root imports (`Client`, `definePlugins`, `Command`, `Declare`, `Middlewares`, `CommandContext`)
   come from `'seyfert'`. The cooldown plugin's exports (`cooldown`, `Cooldown`,
   `CooldownMiddlewares`) come from `'@slipher/cooldown'`.

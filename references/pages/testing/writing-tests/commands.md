@@ -10,7 +10,7 @@ A walkthrough for testing Seyfert commands end-to-end with the external `@sliphe
 toolkit: dispatch a slash command through the real pipeline (`HandleCommand`, option parsing,
 middlewares), assert the reply and REST effects, run dispatches as specific users, populate
 entity options, exercise autocomplete, prefix commands, i18n, and permission denials. The
-toolkit (`createMockBot`, `bot.slash`, `outcome`, `apiUser`, etc.) is NOT part of seyfert-core —
+toolkit (`createMockBot`, `bot.slash`, `outcome`, `apiUser`, etc.) is NOT part of core Seyfert —
 treat its API as doc-authoritative and verify the version in the target project. The
 command-side surface it drives (Command, decorators, option creators, CommandContext, the bans
 shorter, middleware `stop()`, permission-fail / error hooks) IS verified against `./src` below.
@@ -265,7 +265,7 @@ test('greeting resolves per locale', async () => {
   Discord wire body (`resolveBanOptions` converts camelCase `BanOptions` to snake_case before REST).
 - The toolkit surface (`createMockBot`, `bot.*`, `outcome`, `apiUser`, `Routes`,
   `registerBotMember`) could not be verified — it lives in the external `@slipher/testing`
-  package, not in seyfert-core. Verify its exact signatures and version in the target project.
+  package, not in core Seyfert. Verify its exact signatures and version in the target project.
 
 ## Source Anchors
 

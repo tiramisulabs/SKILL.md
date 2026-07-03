@@ -17,7 +17,7 @@ Rule of thumb (from the docs): pure `run()` logic → **fixtures**; anything tou
 middlewares, permissions, components routing, REST, or events → the
 [mock bot](/docs/testing/toolkit/mock-bot). Both ship from `@slipher/testing` and coexist in one suite.
 
-The `@slipher/testing` toolkit itself is NOT part of seyfert-core — its API is doc-authoritative;
+The `@slipher/testing` toolkit itself is NOT part of core Seyfert — its API is doc-authoritative;
 **verify the version in the target project**. The Seyfert core surfaces it dispatches against
 (`Command`, `CommandContext`, decorators, option helpers, component/modal contexts, `getInputValue`)
 ARE verifiable in `./src` and are confirmed below.
@@ -37,7 +37,7 @@ Core seyfert APIs the examples lean on (all re-exported from the `seyfert` root 
 - `ModalContext` — `src/components/modalcontext.ts`; barrel `src/components/index.ts`.
 - `getInputValue(customId, required?)` — overloaded on `ModalContext` (`src/components/modalcontext.ts:130-134`), delegating to `ModalSubmitInteraction.getInputValue` (`src/structures/Interaction.ts`). Returns `string | string[]` when `required: true`, else `… | undefined`. The mock's `ctx.interaction.getInputValue(id, true)` maps to this.
 
-External `@slipher/testing` exports (doc-authoritative, NOT in seyfert-core — verify in target project):
+External `@slipher/testing` exports (doc-authoritative, NOT in core Seyfert — verify in target project):
 
 - `mockCommandContext(CommandClass, { options })` — class form; binds command so `ctx.run()` takes no args and infers option types from `@Declare`/`@Options`. Object form `mockCommandContext<T>({ commandName, options })` is a plain response sink (no `ctx.run()`).
 - `mockComponentContext(ComponentClass)` → harness with `.run(input?)` (executes `run()`, returns the ctx) and `.filter(input?)` (runs `filter()`, matches `customId` first). `input` optional — defaults derived from the class.

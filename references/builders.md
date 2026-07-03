@@ -58,6 +58,29 @@ await ctx.write({ embeds: [embed] });
 menu; cannot nest rows; a message accepts up to 5 rows. `.setComponents(...RestOrArray)` replaces,
 `.addComponents(...RestOrArray)` appends (both accept array or rest args). Type it: `new ActionRow<Button>()`.
 
+**Rebuilding an EXISTING message's row (disable/toggle buttons after a click).** A very common component-handler
+task. `message.components` holds read-side component structures, not editable builders — call `.toBuilder()`
+(from `BaseComponent`) on the one you want, then narrow the resulting builder union with `instanceof ActionRow`.
+No casts, root imports only:
+
+```ts
+import { ActionRow, type ComponentContext } from 'seyfert';
+
+async run(ctx: ComponentContext<'Button'>) {
+  const row = ctx.message.components[0].toBuilder(); // BaseComponent#toBuilder() -> builder union
+  if (!(row instanceof ActionRow)) return;           // type guard narrows to ActionRow
+
+  for (const child of row.components) child.setDisabled(true); // every row child (button/select) has setDisabled
+  await ctx.update({ components: [row] }); // or ctx.message.edit({ components: [row] })
+}
+```
+
+`.toBuilder()` is the clean path — `instanceof ActionRow` narrows without any `as` (use `instanceof Button` /
+`instanceof StringSelectMenu` on a child if you need a type-specific method). Do NOT reach for
+`new ActionRow(component.toJSON())`: `.toJSON()` on a message component returns a broad union that fails the
+constructor's `APIActionRowComponent` param. `fromComponent()` also won't help — it only rebuilds leaf components
+and returns rows unchanged.
+
 **Button** — `src/builders/Button.ts`. `.setCustomId(id)`, `.setLabel(l)`, `.setStyle(ButtonStyle)`,
 `.setURL(url)` (Link style, no customId), `.setSKUId(id)` (Premium style), `.setEmoji(EmojiResolvable)`,
 `.setDisabled(d = true)`. `.setEmoji` THROWS `SeyfertError('INVALID_EMOJI')` if unresolvable. The v4

@@ -13,11 +13,11 @@ Verification status: Source-verified (core touchpoints) + EXTERNAL package (`@sl
 - `outcome(result)` reads the dispatch **lifecycle** — did it reply, defer, open a modal, get denied, or throw?
 - `rendered(subject)` reads the **UI** the handler produced — messages, embeds, buttons, selects, inputs, modals, and Components V2 containers.
 
-Both expose the same three modes: `.get.*` (throws unless exactly one match), `.query.*` (value or `undefined`), and `.all.*` (array). Neither couples to a test runner, so they behave identically under Vitest, Jest, `node:test`, or a bare script. The toolkit is an external package, not part of seyfert-core; the core APIs it dispatches against (`Routes`, `SeyfertError`, middleware `next`/`stop`, commands/components/modals) ARE verifiable in `./src`.
+Both expose the same three modes: `.get.*` (throws unless exactly one match), `.query.*` (value or `undefined`), and `.all.*` (array). Neither couples to a test runner, so they behave identically under Vitest, Jest, `node:test`, or a bare script. The toolkit is an external package, not part of core Seyfert; the core APIs it dispatches against (`Routes`, `SeyfertError`, middleware `next`/`stop`, commands/components/modals) ARE verifiable in `./src`.
 
 ## External package note
 
-`@slipher/testing` is NOT in seyfert-core. The toolkit API below (`outcome`, `rendered`, `createMockBot`, `apiUser`, `userOption`, `bot.slash`, `bot.rest.fail`, `bot.rest.intercept`, `bot.waitForAction`, `DiscordErrors`, query/error types) is doc-authoritative — verify the version and exact signatures in the target project's installed package. Everything in "Key APIs (verified — core touchpoints)" is verified against this repo.
+`@slipher/testing` is NOT in core Seyfert. The toolkit API below (`outcome`, `rendered`, `createMockBot`, `apiUser`, `userOption`, `bot.slash`, `bot.rest.fail`, `bot.rest.intercept`, `bot.waitForAction`, `DiscordErrors`, query/error types) is doc-authoritative — verify the version and exact signatures in the target project's installed package. Everything in "Key APIs (verified — core touchpoints)" is verified against this repo.
 
 ## Key APIs (verified — core touchpoints)
 
@@ -190,14 +190,14 @@ bot.rest.intercept(Routes.ban, (call) => { /* inspect call, throw or pass throug
 - `.get.*` throws on ZERO **or** MULTIPLE matches. Use `.query.*` when absence is legitimate, `.all.*` to collect every match.
 - String matchers are EXACT. Reach for `RegExp` for partial/case-insensitive. When two subjects share a `customId`, scope from the parent `RenderedMessage`/modal/container instead of querying the whole tree.
 - Prefer asserting denial SHAPE (`kind`/`missing`) over user-facing copy — security tests then survive message rewording.
-- `outcome(result).get.error()` REQUIRES `onCommandError: 'capture'`; under the default `'throw'` the dispatch rejects — use `await expect(...).rejects` / `try/catch`. This option lives in the toolkit, not seyfert-core config.
+- `outcome(result).get.error()` REQUIRES `onCommandError: 'capture'`; under the default `'throw'` the dispatch rejects — use `await expect(...).rejects` / `try/catch`. This option lives in the toolkit, not core Seyfert config.
 - `'defer'` as a `kind` matches either `deferReply` or `deferUpdate`; use the specific variant when you care which.
 - Option keys in `bot.slash({ options })` must be lowercase (v5 compile-time rule) and built with the toolkit's typed helpers (`userOption`, etc.).
-- Everything is external — verify signatures against the installed package version. The core touchpoints (`Routes`, `SeyfertError`, middleware `next`/`stop`) are stable in seyfert-core.
+- Everything is external — verify signatures against the installed package version. The core touchpoints (`Routes`, `SeyfertError`, middleware `next`/`stop`) are stable in core Seyfert.
 
 ## Doc vs Source Corrections
 
-- No corrections to the toolkit API itself (external, not in seyfert-core); examples match the upstream MDX (`seyfert-v5`).
+- No corrections to the toolkit API itself (external, not in core Seyfert); examples match the upstream MDX (`seyfert-v5`).
 - Adjacency confirmed: the denial `kind: 'pass'` reflects middleware that ended the chain via `stop()` with no argument (`res({ pass: true })`), since the standalone middleware `pass()` was removed in favor of `stop()` (commit 22eb832; `src/commands/applications/chat.ts:247-256`). The `'pass'` denial kind remains a valid lifecycle classification.
 - Core export shape confirmed: `Routes` and `SeyfertError` are both `seyfert` root exports — no deep import needed. `SeyfertError.is` is overloaded (`is(err)` / `is(err, code)`); constructor is `new SeyfertError(code, { metadata?, cause? })`.
 
@@ -214,4 +214,4 @@ bot.rest.intercept(Routes.ban, (call) => { /* inspect call, throw or pass throug
 - Default to asserting structure: `outcome().get.denial({ kind, missing })` and `outcome().get.response({ kind })` over reply-text matching.
 - `.get` = exactly one (else throw); `.query` = optional; `.all` = collect. Scope from a `RenderedMessage`/modal/container when subjects share a `customId`.
 - For thrown-error assertions, set `onCommandError: 'capture'` and use `get.error()`; otherwise the dispatch rejects and you `try/catch`.
-- This package is external — confirm the installed version's signatures before relying on them; the core dispatch targets (`Routes`, `SeyfertError`, middleware `next`/`stop`) are stable in seyfert-core.
+- This package is external — confirm the installed version's signatures before relying on them; the core dispatch targets (`Routes`, `SeyfertError`, middleware `next`/`stop`) are stable in core Seyfert.

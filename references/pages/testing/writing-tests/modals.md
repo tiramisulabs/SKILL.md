@@ -6,7 +6,7 @@ Verification status: Source-verified (core) + external package (`@slipher/testin
 
 ## Page Summary
 
-Covers testing the modal flow with the `@slipher/testing` mock bot. A modal is a two-step interaction: a command/component handler opens it via `ctx.modal(modal, { waitFor })`, then the user submits field values. The mock drives the whole open -> resolve -> settle handshake: dispatch the opener, then chain `.fillModal(customId, values)` to submit, or `.timeoutModal()` to exercise the timeout branch. `@slipher/testing` is NOT part of seyfert-core (verify its version in the target project); the Seyfert builders and the `modal()` callback API it dispatches against ARE verified below.
+Covers testing the modal flow with the `@slipher/testing` mock bot. A modal is a two-step interaction: a command/component handler opens it via `ctx.modal(modal, { waitFor })`, then the user submits field values. The mock drives the whole open -> resolve -> settle handshake: dispatch the opener, then chain `.fillModal(customId, values)` to submit, or `.timeoutModal()` to exercise the timeout branch. `@slipher/testing` is NOT part of core Seyfert (verify its version in the target project); the Seyfert builders and the `modal()` callback API it dispatches against ARE verified below.
 
 Two modal architectures exist in Seyfert, and tests differ slightly:
 1. **Awaited (inline)**: `await ctx.modal(modal, { waitFor })` returns the submit interaction (or `null` on timeout) in the same handler. Test with `.fillModal(...)` / `.timeoutModal()`.
@@ -217,7 +217,7 @@ test('decoupled nickname modal runs the registered handler', async () => {
 - Clarification (not in docs): the `waitFor` timeout only arms when `waitFor > 0` (`Interaction.ts:527`); passing `0`/omitting it on the awaited overload would never auto-resolve to `null`.
 - Clarification (not in docs): `ctx.modal()` throws `CANNOT_USE_MODAL` on a prefix context with no interaction (`chatcontext.ts:102`).
 - The doc says "It calls `ctx.modal(...)` (or `interaction.modal(...)`)". Confirmed: both the context wrapper (`chatcontext.ts:99-105`) and the underlying `interaction.modal` (`Interaction.ts:507`) share the identical overload set.
-- `@slipher/testing` helpers (`createMockBot`, `clickButton`, `fillModal`, `timeoutModal`) cannot be verified in seyfert-core — external package, doc-authoritative.
+- `@slipher/testing` helpers (`createMockBot`, `clickButton`, `fillModal`, `timeoutModal`) cannot be verified in core Seyfert — external package, doc-authoritative.
 
 ## Source Anchors
 

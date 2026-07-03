@@ -6,11 +6,11 @@ Verification status: Source-verified (core) + external package (`@slipher/testin
 
 ## Page Summary
 
-Shows how to test a Seyfert event handler in-process: register the real event with the test toolkit's `createMockBot`, feed it a gateway dispatch event via `bot.emit(NAME, payload)`, then assert on the effect (sent DM/message, recorded REST call, or world state). No WebSocket, no network. `emit` runs the handler through the production pipeline and resolves the awaited REST work before returning, so the assertion can run immediately. The testing harness (`@slipher/testing`) is an EXTERNAL package not part of seyfert-core; the event-authoring API it drives (`createEvent`, the `run` signature, gateway vs client event names, `client.users.write`) IS verifiable in `./src` and is confirmed below.
+Shows how to test a Seyfert event handler in-process: register the real event with the test toolkit's `createMockBot`, feed it a gateway dispatch event via `bot.emit(NAME, payload)`, then assert on the effect (sent DM/message, recorded REST call, or world state). No WebSocket, no network. `emit` runs the handler through the production pipeline and resolves the awaited REST work before returning, so the assertion can run immediately. The testing harness (`@slipher/testing`) is an EXTERNAL package not part of core Seyfert; the event-authoring API it drives (`createEvent`, the `run` signature, gateway vs client event names, `client.users.write`) IS verifiable in `./src` and is confirmed below.
 
 ## Key APIs (verified)
 
-Core (seyfert-core, root import from `seyfert`):
+Core (core Seyfert, root import from `seyfert`):
 - `createEvent<E>({ data, run })` — `src/index.ts:68`. Signature: `createEvent<E extends ClientNameEvents | CustomEventsKeys>(data: { data: { name: E; once?: boolean }; run: (...args: ResolveEventParams<E>) => Awaitable<unknown> })`. It mutates `data.data.once ??= false` and returns the **same object** (no class wrapper). Pass the default export straight into `events: [...]`.
 - Event name on `data.name` is the **camelCase** client event name (e.g. `'guildMemberAdd'`, `'messageCreate'`, `'ready'`), NOT the uppercase gateway name — `ClientNameEvents = Extract<keyof ClientEvents, string>` (`src/events/event.ts:14`). The uppercase form (`'GUILD_MEMBER_ADD'`) is only the raw gateway dispatch name used at the `emit` boundary.
 - `run` params resolve via `ResolveEventParams` / `EventContext` (`src/events/handler.ts:29-36`, `src/events/event.ts:22-29`). For a gateway event the tuple is `[transformedPayload, client, shardId]`: `[K in keyof ClientEvents]: (...data: [Awaited<ClientEvents[K]>, UsingClient, number]) => unknown`.
@@ -190,7 +190,7 @@ test('greets via production config', async () => {
 - Minor doc wording: the MDX calls event handlers "real classes" ("Like commands, event handlers are real classes"). Per src, `createEvent` returns the **plain input object** (`src/index.ts:72-73`), not a class instance — functionally identical for `events: [...]`, but there is no class wrapper.
 - `client.users.write` confirmed to internally `createDM` first, then `messages.write` — the page's "DMs each new member" description is accurate (`src/common/shorters/users.ts:46-47`).
 - v5 deltas relevant to this page (changelog → Events, confirmed in src): `run` is `Awaitable<unknown>`; custom (non-gateway) handlers dropped the trailing `shardId`; throwing in a `once` event resets it; `VOICE_CHANNEL_STATUS_UPDATE` now hands a resolved `VoiceChannel | undefined` instead of a raw cache promise.
-- All `@slipher/testing` surface (`createMockBot`, `emit`, `world.query.dm`, `world.query.channel`, `allowNoHandler`, `registeredEvents`, `loadFromConfig`) is NOT in seyfert-core — cannot be source-verified here; treat as doc-authoritative and verify the installed `@slipher/testing` version in the target project.
+- All `@slipher/testing` surface (`createMockBot`, `emit`, `world.query.dm`, `world.query.channel`, `allowNoHandler`, `registeredEvents`, `loadFromConfig`) is NOT in core Seyfert — cannot be source-verified here; treat as doc-authoritative and verify the installed `@slipher/testing` version in the target project.
 
 ## Source Anchors
 

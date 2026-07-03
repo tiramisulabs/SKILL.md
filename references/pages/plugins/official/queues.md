@@ -6,7 +6,7 @@ Verification status: Source-verified (core integration) + EXTERNAL package (queu
 
 ## Page Summary
 
-`@slipher/queues` is an EXTERNAL package (NOT in seyfert-core) that adds typed background job queues to a Seyfert v5 bot. Producers enqueue jobs from anywhere (`ctx.queues.get(name).add(...)`); processors are decorated classes (`@Processor` + exactly one `@Process` handler, plus `@OnQueueEvent` / `@OnWorkerEvent` listeners). A driver decides where jobs run: `memory()` in-process, or `persistent()` on BullMQ/Redis — same API either way. The package plugs into Seyfert through the standard plugin surface (`definePlugins`, `SeyfertRegistry`, client/ctx extension, `client.close()` teardown), all of which are verified against ./src; the queue API itself is doc-authoritative — verify the version in the target project.
+`@slipher/queues` is an EXTERNAL package (NOT in core Seyfert) that adds typed background job queues to a Seyfert v5 bot. Producers enqueue jobs from anywhere (`ctx.queues.get(name).add(...)`); processors are decorated classes (`@Processor` + exactly one `@Process` handler, plus `@OnQueueEvent` / `@OnWorkerEvent` listeners). A driver decides where jobs run: `memory()` in-process, or `persistent()` on BullMQ/Redis — same API either way. The package plugs into Seyfert through the standard plugin surface (`definePlugins`, `SeyfertRegistry`, client/ctx extension, `client.close()` teardown), all of which are verified against ./src; the queue API itself is doc-authoritative — verify the version in the target project.
 
 ## Key APIs
 
@@ -248,7 +248,7 @@ process.on('SIGTERM', () => {
 
 - None for core APIs. `definePlugins` (`:283`), `createPlugin` (`:240`), `createPluginFactory` (`:267`), `SeyfertRegistry` (`types.ts:32`), `new Client({ plugins })` (`base.ts:195/272`), and `client.close()` (`base.ts:502`) all match ./src exactly and resolve from the `'seyfert'` root barrel.
 - The MDX comment says jobs are "switched on the `job` field" but the handler/registration switches on `job.name` — the `job` key is the discriminant in the `RegisteredQueues` registration; `name` is the runtime field on the job object. Package convention, not a core conflict; verify against the installed `@slipher/queues` types.
-- Queue decorators/drivers/registry methods are NOT in seyfert-core; they cannot be source-verified here. Treat the queue API as doc-authoritative and confirm against the installed package version.
+- Queue decorators/drivers/registry methods are NOT in core Seyfert; they cannot be source-verified here. Treat the queue API as doc-authoritative and confirm against the installed package version.
 - v5 reminders that touch these examples (verified in checklist): option keys must be lowercase; `write`/`editOrReply` return `void` unless the response flag is `true`; middleware uses `stop()` (no `pass()`); custom event `run` is `Awaitable<unknown>` with no trailing `shardId`.
 
 ## Source Anchors
@@ -262,7 +262,7 @@ process.on('SIGTERM', () => {
 ## Agent Guidance
 
 - Use when a bot needs deferred/background work (media transcode, welcome flows, scheduled side effects, rendering). Reach for `memory()` for single-process bots; switch to `persistent()` only when jobs must survive restarts or span workers — the queue/processor code is identical.
-- EXTERNAL package: before editing production code, confirm it is installed and check its version/types — the queue API here is from docs, not seyfert-core. `pnpm add @slipher/queues` (+ `bullmq` for persistent).
+- EXTERNAL package: before editing production code, confirm it is installed and check its version/types — the queue API here is from docs, not core Seyfert. `pnpm add @slipher/queues` (+ `bullmq` for persistent).
 - One `@Process()` per `@Processor`; dispatch named jobs via `switch (job.name)`. There is no per-name framework dispatch.
 - `ctx.queues === client.queues === queuesPlugin.registry` (same object). Capture `registry` (not `client`) in services loaded by `index.ts` to avoid circular imports.
 - Gotchas: `add('name', { delay: '5s' })` is ambiguous → `TypeError`; pass an explicit `{}` third arg or non-string data. `retryDelay` only applies when `attempts > 1` (else `SLIPHER_QUEUE_RETRY_DELAY_NO_RETRIES`). Invalid duration strings → `InvalidDurationError`. Listener errors are isolated via `reportListenerError` and never alter job state.

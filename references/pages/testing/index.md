@@ -2,11 +2,11 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/testing/index
 Coverage reference: testing.md
-Verification status: External (doc-authoritative, not in seyfert-core) — core dispatch + builder/Vitest APIs verified against ./src
+Verification status: External (doc-authoritative, not in core Seyfert) — core dispatch + builder/Vitest APIs verified against ./src
 
 ## Page Summary
 
-`@slipher/testing` is a runner-agnostic testing suite for Seyfert v5 bots and Slipher plugins. It runs your bot (or a slice of it) entirely in-process — no token, no gateway, no network, never touching Discord — and bundles no test runner of its own (bring Vitest, Jest, `node:test`, etc.). The package is NOT part of seyfert-core; it is an external peer-dependency package. Verify its exact version and API in the target project before relying on signatures.
+`@slipher/testing` is a runner-agnostic testing suite for Seyfert v5 bots and Slipher plugins. It runs your bot (or a slice of it) entirely in-process — no token, no gateway, no network, never touching Discord — and bundles no test runner of its own (bring Vitest, Jest, `node:test`, etc.). The package is NOT part of core Seyfert; it is an external peer-dependency package. Verify its exact version and API in the target project before relying on signatures.
 
 Most Discord bots are hard to unit-test because running one means opening a gateway connection — commands, components, and events have nowhere to run otherwise. This package solves that by making the bot testable in-process. The API is "actively evolving" per the docs, so always version-check.
 
@@ -21,7 +21,7 @@ Where to go next (doc subpages): **Writing Tests** (`/docs/testing/writing-tests
 
 ## Key APIs (verified — CORE only; the testing toolkit itself is external)
 
-The testing package dispatches against these real seyfert-core APIs (the toolkit symbols `mockCommandContext`, `mockBot`, `mockUser`, `mockGuild`, `MockGateway`, etc. live in `@slipher/testing` and are NOT verifiable here):
+The testing package dispatches against these real core Seyfert APIs (the toolkit symbols `mockCommandContext`, `mockBot`, `mockUser`, `mockGuild`, `MockGateway`, etc. live in `@slipher/testing` and are NOT verifiable here):
 
 - `HandleCommand` class — `src/commands/handle.ts:64`. The production command/interaction dispatcher. Verified async methods: `interaction(body, shardId, __reply?)` (`:274`), `chatInput(...)` (`:204`), `message(rawMessage, shardId)` (`:364`), `messageComponent(interaction)` (`:266`), `modal(interaction)` (`:259`), `autocomplete(...)` (`:67`), `contextMenu(...)` (`:112`), `entryPoint(command, interaction, context)` (`:168`); plus resolver helpers `makeResolver(...)` (`:599`), `argsParser(content, command, message)` (`:492`), `resolveCommandFromContent(...)` (`:500`). Constructed with `new HandleCommand(client)`.
   - NOTE: `HandleCommand` is NOT re-exported from the `seyfert` root barrel. `src/commands/index.ts` only re-exports `type CommandFromContent` from `./handle`. To reference the class directly, deep-import `seyfert/lib/commands/handle` (the testing package handles this internally).
@@ -69,7 +69,7 @@ await bot.dispatchSlash?.('ping');  // dispatches a raw interaction through Hand
 
 ### CORE (verified against ./src) — unit-testing without the toolkit
 
-For testing seyfert-core itself, or for unit tests that need no `@slipher/testing`, you assert directly on verified core APIs. v5 builders validate on `toJSON()` — perfect for fast, dependency-free unit tests. This mirrors `tests/builder-validation.test.mts`.
+For testing core Seyfert itself, or for unit tests that need no `@slipher/testing`, you assert directly on verified core APIs. v5 builders validate on `toJSON()` — perfect for fast, dependency-free unit tests. This mirrors `tests/builder-validation.test.mts`.
 
 ```ts
 import { describe, expect, test } from 'vitest';
@@ -110,7 +110,7 @@ try {
 
 ### CORE (verified) — Vitest config used by this repo
 
-seyfert-core's own suite (`tests/*.test.mts`) runs on plain Vitest with serial execution. Replicate when in-process global state (a shared `Client`) must not be clobbered by parallel files:
+core Seyfert's own suite (`tests/*.test.mts`) runs on plain Vitest with serial execution. Replicate when in-process global state (a shared `Client`) must not be clobbered by parallel files:
 
 ```ts
 // tests/vitest.config.mts
@@ -135,7 +135,7 @@ export default defineConfig({
 - **Context return types changed (v5).** `write(...)` / `editOrReply(...)` return `void` unless the response flag (`withResponse` / `fetchReply`) is `true`. If a test relied on a returned `Message` from the default call, pass the flag explicitly.
 - **Collectors use camelCase client event names (v5).** `client.collectors.run('messageCreate', filter)` — not `'MESSAGE_CREATE'`. Also every matching collector now runs (the first-match `break` is gone); tighten filters in tests that assumed first-match-wins. Type is `CollectorRunParameters` (old `CollectorRunPameters` typo removed).
 - **Custom (non-gateway) event handlers no longer receive a trailing `shardId`** — `createEvent({ data:{name}, run(payload, client) {} })`. Update event-test signatures accordingly.
-- **Contributing to seyfert-core uses plain Vitest, not `@slipher/testing`.** This repo has no `@slipher/testing` dependency; tests live in `tests/*.test.mts` (config `tests/vitest.config.mts`). Don't suggest the toolkit for core contributions.
+- **Contributing to core Seyfert uses plain Vitest, not `@slipher/testing`.** This repo has no `@slipher/testing` dependency; tests live in `tests/*.test.mts` (config `tests/vitest.config.mts`). Don't suggest the toolkit for core contributions.
 
 ## Doc vs Source Corrections
 
@@ -158,7 +158,7 @@ export default defineConfig({
 ## Agent Guidance
 
 - This is an OVERVIEW page for an EXTERNAL package. Do not invent `@slipher/testing` exports — when a user asks for concrete test code, consult the installed package's types or the toolkit subpages, and always add "verify version in target project". The EXTERNAL examples above are conceptual sketches matching doc intent, not verified signatures.
-- For testing seyfert-core itself (this repo), there is NO `@slipher/testing` dependency; use plain Vitest. The CORE examples above are verified and copy-paste-ready.
+- For testing core Seyfert itself (this repo), there is NO `@slipher/testing` dependency; use plain Vitest. The CORE examples above are verified and copy-paste-ready.
 - Gotcha (v5): middleware control flow now uses `stop()` instead of `pass()`. Carried-over `pass()` is stale.
 - Gotcha: `HandleCommand` is not on the `seyfert` root export — deep-import `seyfert/lib/commands/handle` for a custom harness.
 - The mock-bot layer asserts on captured outgoing REST rather than real sends — the framing for "assertions without a gateway/token".

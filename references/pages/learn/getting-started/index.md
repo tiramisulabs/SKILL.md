@@ -2,7 +2,7 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/learn/getting-started/index
 Coverage reference: setup-runtime.md
-Verification status: Source-verified (seyfert-core, the authoritative Seyfert source)
+Verification status: Source-verified (the authoritative Seyfert source)
 
 ## Page Summary
 The upstream page is a short marketing/installation intro: prerequisites (Node v18+, TypeScript v4.9+, an npm-like package manager), `npm add seyfert`, and the `@dev` github-mirror tag. It also mentions Deno/Bun support "from version 2.2.0" (stale lore — see Corrections). It carries no real API. This note keeps the install facts and grounds them in the actual `package.json` and the root exports / runtime entry points an agent needs when scaffolding a Seyfert v5 project, then adds copy-paste "first bot" recipes.

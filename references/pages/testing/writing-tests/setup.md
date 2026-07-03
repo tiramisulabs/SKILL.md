@@ -11,7 +11,7 @@ Verification status: Source-verified (core seyfert APIs) + external package (`@s
 Foundation of the "Writing Tests" guide. You install the external `@slipher/testing` dev dependency, stand up an in-process mock bot with `createMockBot(...)`, dispatch a real slash command with `bot.slash(...)`, and assert on the captured REST reply (`result.content`). No token, no gateway, no network: the mock turns your payload into a raw `APIInteraction`, runs it through Seyfert's `HandleCommand`, parses options with the real resolver, runs your middlewares, and records outgoing REST calls instead of sending them.
 
 Split of responsibility:
-- The **toolkit surface** (`createMockBot`, `bot.slash`, `bot.clickButton`, `bot.selectMenu`, `bot.emit`, `result.*`) is EXTERNAL and doc-authoritative — NOT in seyfert-core. Verify the installed version's API in the target project.
+- The **toolkit surface** (`createMockBot`, `bot.slash`, `bot.clickButton`, `bot.selectMenu`, `bot.emit`, `result.*`) is EXTERNAL and doc-authoritative — NOT in core Seyfert. Verify the installed version's API in the target project.
 - The **seyfert classes it dispatches against** (`Command`, `Declare`, `Options`, `createStringOption`, `CommandContext`, `ctx.write`, `ctx.options`, `ActionRow`, `Button`, `createEvent`, `createComponentCollector`, `client.users.write`) are ALL verified in `./src` and run identically in production.
 
 ## Key APIs (verified)
@@ -30,7 +30,7 @@ Core seyfert APIs (root imports from `'seyfert'` via `src/index.ts -> export * f
 - `createEvent({ data: { name }, run })` — `src/index.ts:68`. v5: `run` is `Awaitable<unknown>`; custom (non-gateway) handlers no longer receive a trailing `shardId`.
 - `Message.createComponentCollector(options?)` (`src/structures/Message.ts:76`) and `client.users.write(userId, body)` (`src/common/shorters/users.ts:46`, DMs the user).
 
-External toolkit API (doc-authoritative — verify version in target project; NOT in seyfert-core):
+External toolkit API (doc-authoritative — verify version in target project; NOT in core Seyfert):
 
 - `createMockBot(options)` from `@slipher/testing` — boots a real Seyfert client in-process; every REST call is recorded. Returns an `await using` disposable. Full option set (per toolkit reference): `commands`, `components`, `events`, `middlewares`, `globalMiddlewares`, `world`, `simulateGateway` (default `true`), `onUnhandledRest`, `plugins`, `clientOptions`, `loadFromConfig`, `commandsDir`/`componentsDir`/`eventsDir`/`langsDir`, `shards`/`shardLatency`, `botId`/`applicationId`, `prefixes`/`mentionAsPrefix`.
 - `bot.slash(...)` — dispatch a slash interaction. Two forms: `bot.slash({ name, options })` (raw by-name) or `bot.slash(GreetCommand, { options })` (option inference from the class).
@@ -233,7 +233,7 @@ test('greet', async () => {
 ## Doc vs Source Corrections
 
 - None for the core seyfert APIs — every import, decorator, builder, and method in the doc examples resolves exactly as shown in `./src` and matches the v5 checklist (lowercase option keys, `ctx.write` returns `void` unless `withResponse: true`, `createEvent.run` is `Awaitable<unknown>`).
-- The `@slipher/testing` surface (`createMockBot` + all options, `bot.slash`/`clickButton`/`selectMenu`/`emit`, `result.*`, `bot.world`) is NOT in seyfert-core and cannot be source-verified; treat the MDX as authoritative and confirm the installed version's API in the target project.
+- The `@slipher/testing` surface (`createMockBot` + all options, `bot.slash`/`clickButton`/`selectMenu`/`emit`, `result.*`, `bot.world`) is NOT in core Seyfert and cannot be source-verified; treat the MDX as authoritative and confirm the installed version's API in the target project.
 - Freshness note (not a doc error): on `more-qol`, `createStringOption` choices and `Options` arrays now accept `readonly`; doc examples type-check unchanged.
 
 ## Source Anchors
@@ -248,7 +248,7 @@ test('greet', async () => {
 
 ## Agent Guidance
 
-- Use this page when a user wants to unit/integration test Seyfert commands/components/events without a live gateway. The mechanism is the external `@slipher/testing` package — always have the user install it as a dev dependency (`pnpm add -D @slipher/testing`) and verify its installed version, since its API is not pinned by seyfert-core.
+- Use this page when a user wants to unit/integration test Seyfert commands/components/events without a live gateway. The mechanism is the external `@slipher/testing` package — always have the user install it as a dev dependency (`pnpm add -D @slipher/testing`) and verify its installed version, since its API is not pinned by core Seyfert.
 - The command/component/event-authoring half is fully standard Seyfert; the same code runs in production. Don't introduce test-only shapes.
 - Do not invent `createMockBot` options or `result`/`bot` methods beyond those listed (sourced from the toolkit reference). When unsure, point the user at The Toolkit > Mock bot / Dispatching reference pages.
 - For deeper flows, route users to sibling pages: `writing-tests/commands`, `writing-tests/components` (buttons/selects/collectors), `writing-tests/events`, `writing-tests/modals`, and `toolkit/*` (mock-bot, dispatching, world, gateway, assertions).

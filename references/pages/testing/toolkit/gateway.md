@@ -8,11 +8,11 @@ Verification status: Source-verified (core) + external package (doc-authoritativ
 
 ## Page Summary
 
-`createMockBot()` (from the external `@slipher/testing` toolkit) installs an in-process `MockGateway` where Seyfert expects its `ShardManager`. It lets tests feed raw gateway dispatch payloads into the real bot (`bot.emit(...)`) so your actual event handlers run through the production pipeline, and it records presence updates, raw sends, and controllable shards so disconnect/reconnect infra hooks can be exercised without ever opening a WebSocket. The toolkit API is doc-authoritative and NOT part of seyfert-core; the core gateway surface it stands in for (`client.gateway` / `ShardManager`: `setPresence`, `send`, `latency`, shard lifecycle callbacks) IS verifiable in `./src`. `MockGateway` is explicitly NOT a transport/protocol emulator — it only models the surface bots read in tests, and that shape is unstable during 0.x.
+`createMockBot()` (from the external `@slipher/testing` toolkit) installs an in-process `MockGateway` where Seyfert expects its `ShardManager`. It lets tests feed raw gateway dispatch payloads into the real bot (`bot.emit(...)`) so your actual event handlers run through the production pipeline, and it records presence updates, raw sends, and controllable shards so disconnect/reconnect infra hooks can be exercised without ever opening a WebSocket. The toolkit API is doc-authoritative and NOT part of core Seyfert; the core gateway surface it stands in for (`client.gateway` / `ShardManager`: `setPresence`, `send`, `latency`, shard lifecycle callbacks) IS verifiable in `./src`. `MockGateway` is explicitly NOT a transport/protocol emulator — it only models the surface bots read in tests, and that shape is unstable during 0.x.
 
 ## Key APIs (verified)
 
-### External — @slipher/testing (NOT in seyfert-core; verify version in target project)
+### External — @slipher/testing (NOT in core Seyfert; verify version in target project)
 - `createMockBot({ events?, shards?, shardLatency? })` -> disposable mock bot (use with `await using`).
 - `bot.emit(name, payload, opts?)` — name is the UPPERCASE Discord dispatch name (`'GUILD_MEMBER_ADD'`); resolves the REST work the handler awaited before returning. Fails loud if no registered handler ran unless `{ allowNoHandler: true }`.
 - `bot.registeredEvents()` — list wired handlers (debug a green-but-silent assertion).
@@ -216,7 +216,7 @@ test('joinVoice sends an op-4 VoiceStateUpdate on the guild shard', async () => 
 ## Agent Guidance
 
 - Use this page when writing unit/integration tests that drive gateway-facing logic (event handlers, presence logic, outbound `gateway.send`, shard-lifecycle/infra code) without a live connection. It pairs with `@slipher/testing`'s `createMockBot`.
-- External dependency: `@slipher/testing` is NOT shipped by seyfert-core. Confirm it is installed and check its installed version in the target project before relying on exact method names — the toolkit explicitly marks the mock gateway shape as unstable during 0.x.
+- External dependency: `@slipher/testing` is NOT shipped by core Seyfert. Confirm it is installed and check its installed version in the target project before relying on exact method names — the toolkit explicitly marks the mock gateway shape as unstable during 0.x.
 - For testing INTERACTION-driven logic (commands/components/modals) instead of gateway dispatch, see the sibling testing/toolkit pages — this one is specifically the gateway/world surface.
 - Enums (`ActivityType`, `GatewayOpcodes`, `PresenceUpdateStatus`) import cleanly from `'seyfert'`; no deep import needed.
 - Drive shard infra via Recipe B: simulate hooks -> wrapped callbacks -> `SHARD_DISCONNECT` / `SHARD_RECONNECT` events. Register those events on the mock bot to assert your reconnect/alerting logic.

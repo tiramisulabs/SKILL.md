@@ -13,7 +13,7 @@ single **registry**; a **driver** decides where they run — `memory()` (in-proc
 `persistent()` (BullMQ/Redis, restart-surviving and replica-coordinated). The same task code runs
 under either driver. Tasks are defined as decorated classes (`@Cron`/`@Interval`) or via imperative
 registry calls, and are reached through `ctx.scheduler`, `client.scheduler`, or a captured
-`registry` (all the same object). The package is EXTERNAL (not in seyfert-core); its
+`registry` (all the same object). The package is EXTERNAL (not in core Seyfert); its
 decorators/drivers/registry API below come from the MDX docs and MUST be re-verified against the
 version installed in the target project. The Seyfert integration surface it relies on
 (`definePlugins`, `SeyfertRegistry` augmentation, plugin `setup`/`teardown` lifecycle, and
@@ -306,7 +306,7 @@ await client.start();
 None for the core integration surface. The MDX's use of `definePlugins`, the
 `declare module 'seyfert' { interface SeyfertRegistry { plugins } }` augmentation, and the
 `setup`/`teardown` lifecycle all match ./src exactly (anchors below). The `@slipher/scheduler`
-package itself is not in seyfert-core, so its decorator/driver/registry signatures could not be
+package itself is not in core Seyfert, so its decorator/driver/registry signatures could not be
 diffed against source — treat them as doc-authoritative and verify against the installed package
 version. Note (v5 accuracy): added examples use lowercase option keys, `as const` on `choices`, and
 `run(payload, client)` event signature (no `shardId`) per the v5 checklist.
@@ -324,7 +324,7 @@ version. Note (v5 accuracy): added examples use lowercase option keys, `as const
 
 - This is an EXTERNAL package. Before editing production code, confirm `@slipher/scheduler` is
   installed and check that version's actual exports/signatures — the decorator/driver/registry names
-  here come from the MDX docs, not from seyfert-core source.
+  here come from the MDX docs, not from Seyfert source.
 - The only hard Seyfert requirement is wiring the plugin like any other: build with `scheduler(...)`,
   pass through `definePlugins`, augment `SeyfertRegistry['plugins']`, and hand `plugins` to
   `new Client({ plugins })`. `ctx.scheduler` / `client.scheduler` only type-resolve after the

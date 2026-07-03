@@ -59,7 +59,7 @@ here is `HttpClient`, never `WorkerClient`.
 - `client.uploadCommands({ applicationId?, cachePath? })` (`src/client/base.ts:1056`) — registers
   your loaded commands with Discord. `applicationId` falls back to `getRC().applicationId`. You
   call this **once** (deploy step), not on every Worker request.
-- `GenericAdapter` — **external** (`@slipher/generic-adapter`, not in seyfert-core). Provides
+- `GenericAdapter` — **external** (`@slipher/generic-adapter`, not in core Seyfert). Provides
   `new GenericAdapter(client)`, `adapter.start()`, and `adapter.fetch(req)`. Verify its exact
   API/version in the target project.
 

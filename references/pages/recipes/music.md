@@ -29,7 +29,7 @@ Seyfert core APIs touched by the recipe (all importable from the `seyfert` root 
 - `Embed` builder — `src/builders/Embed.ts` (barrel `src/builders/index.ts:33`).
 - `createEvent({ data: { name, once? }, run })` — `src/index.ts:68`. `run` is typed `Awaitable<unknown>`; custom/non-gateway handlers no longer receive a trailing `shardId` (v5).
 
-External (NOT in seyfert-core — verify versions in the target project):
+External (NOT in core Seyfert — verify versions in the target project):
 
 - `kazagumo`: `Kazagumo`, `createPlayer`, `search`, `players.get`, `player.queue.add`, `player.skip`, `player.pause`, `player.setVolume`, `player.destroy`, `player.play`, `player.playing`, `player.paused`, `player.queue.current`, result `type === "PLAYLIST"`, `result.tracks`, `result.playlistName`. Kazagumo emits `playerStart`, `playerEnd`, `playerEmpty` events.
 - `shoukaku`: `Connectors.Seyfert`, `NodeOption`, `kazagumo.shoukaku.on("ready", ...)`.
@@ -338,7 +338,7 @@ export default createEvent({
 - Import style: the MDX splits imports into two `from "seyfert"` statements and lists `MessageFlags` separately. Source confirms a single barrel works — `MessageFlags`, the decorators, `createStringOption`, `Embed`, `createEvent`, and `CommandContext` are all exported from the `seyfert` root. Consolidated in the examples. (cosmetic; doc not wrong, just split)
 - `send` callback signature: doc is correct against source — `ShardManager.send(shardId: number, payload)` takes the numeric shard id first (`src/websocket/discord/sharder.ts:299`), which is why `calculateShardId(guildId)` is called inside. Flagged because it is easy to misread as `send(guildId, payload)`.
 - v5 deltas applied to the added examples (NOT in the original MDX, which only shows `play`): lowercase option keys are now compile-time enforced; numeric options (`createNumberOption`) require numeric `choices`/autocomplete values; `ctx.inGuild()` narrows to `GuildCommandContext` so `guildId`/`member`/`me()` are non-undefined; `createEvent`'s `run` is `Awaitable<unknown>` and custom (non-gateway) handlers lost the trailing `shardId`.
-- The kazagumo/shoukaku surface (`Kazagumo`, `Connectors.Seyfert`, `createPlayer`, `search`, `players.get`, `player.skip/destroy/setVolume`, events, queue/track shapes) is external and unverifiable against seyfert-core — verify against the installed package versions.
+- The kazagumo/shoukaku surface (`Kazagumo`, `Connectors.Seyfert`, `createPlayer`, `search`, `players.get`, `player.skip/destroy/setVolume`, events, queue/track shapes) is external and unverifiable against core Seyfert — verify against the installed package versions.
 
 ## Source Anchors
 
@@ -367,4 +367,4 @@ export default createEvent({
 - **Lowercase option keys + typed numeric choices** are compile-time errors in v5. `createNumberOption`/`createIntegerOption` autocomplete and `choices` values must be numbers; mark `choices`/`channel_types` arrays `as const`.
 - **Player lifecycle is the library's, not Seyfert's.** Creating a player joins voice via your `send` callback; `player.destroy()` leaves and clears the queue. If you ever bypass the library, Seyfert exposes `client.gateway.joinVoice(...)` / `leaveVoice(...)` directly.
 - **Always `player.destroy()` on empty/idle** (via `playerEmpty` or a `voiceStateUpdate` auto-leave) so the bot doesn't linger in empty channels.
-- **Pin versions.** `kazagumo` + `shoukaku` APIs (`createPlayer`, `search`, result `type`/`playlistName`, event names) change across majors and are not guaranteed by seyfert-core. Verify them against the installed packages in the target project.
+- **Pin versions.** `kazagumo` + `shoukaku` APIs (`createPlayer`, `search`, result `type`/`playlistName`, event names) change across majors and are not guaranteed by core Seyfert. Verify them against the installed packages in the target project.
