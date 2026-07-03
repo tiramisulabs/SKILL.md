@@ -128,6 +128,7 @@ Open only what the task needs:
 | Slash commands, options/autocomplete, middlewares, subcommands/groups, context menus, prefix commands, errors/defaults, `extendContext` | `references/commands.md` |
 | Message components, component/modal handlers, collectors, polls, Components v2 | `references/components.md` |
 | Builders: `Embed`, `Button`, `ActionRow`, select menus, `Modal`, v2 (`Container`/`Section`/…), attachments, `Formatter` | `references/builders.md` |
+| **Shorters** (`client.messages`/`channels`/`members`/… resource methods), full method catalog, structure shorters, and the shorter→`proxy`→`rest` fallback chain | `references/shorters.md` |
 | Plugin authoring: `createPlugin`/`definePlugins`, lifecycle, runtime hooks, services/requirements, ordering, diagnostics, official `@slipher/*` plugins | `references/plugins.md` |
 | i18n/langs, cache (adapters/resources), structures/transformers, and recipes (DB, logger, API access, monetization, music, yuna) | `references/i18n-cache-recipes.md` |
 | Testing with `@slipher/testing` (mock bot, dispatching, world, assertions, fixtures, gateway, defaults) + local unit tests | `references/testing.md` |
@@ -142,6 +143,7 @@ Open only what the task needs:
 - Commands with subcommands should live in a dedicated folder. With `@AutoLoad()`, this is required: Seyfert scans the parent command's directory recursively, so keep unrelated helpers (`shared.ts`, constants, group maps, resolvers) outside that auto-loaded folder, preferably in `src/lib/**`.
 - `client.start()` does **not** upload application commands — call `client.uploadCommands({ cachePath })` deliberately when registration is part of the task.
 - Middleware control flow is `next()` / `stop()` only — **there is no `pass()`** (use `stop()` / `stop(null)` to silently skip).
+- **Shorter-first for every Discord API call.** Reach for a client shorter (`client.messages.write`, `client.members.fetch`, `client.roles.list`, …) or a structure method (`member.ban()`, `channel.messages.write()`) before anything else — they take raw ids, cache, transform, resolve files, and return typed structures. If a method **seems missing**, walk the chain: **① find the shorter** (`references/shorters.md` has the full catalog) **→ ② `client.proxy.<route>()`** for raw routes with no shorter **→ ③ `client.rest.request<T>(...)`**, typing `T` from the Discord API v10 reference. Never hand-roll `fetch`/`axios`. Accessors are plural (`client.messages`, not `client.message`).
 - Discord constraints: slash names lowercase; context-menu names may use spaces/case **and require an explicit `@Declare({ type })` with no `description`**; autocomplete must `respond()` (not `reply()`); action-row/component limits apply.
 - For app-wide services prefer **plugins** (`createPlugin`/`definePlugins`); for one-off context sugar use `extendContext` (augment `ExtendContext`).
 

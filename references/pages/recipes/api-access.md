@@ -3,6 +3,7 @@
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/recipes/api-access
 Coverage reference: i18n-cache-recipes.md
 Verification status: Source-verified (the authoritative Seyfert source)
+See also: `../../shorters.md` — the dedicated shorters section with the full `client.*` method catalog and the shorter→`proxy`→`rest` fallback chain. This page is the deep dive on layers 2–3 (`client.proxy`, `client.rest`).
 
 ## Page Summary
 
