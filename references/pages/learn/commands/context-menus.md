@@ -297,24 +297,7 @@ export default class WarnUserCommand extends ContextMenuCommand {
 
 ## Source Anchors
 
-- `src/commands/applications/menu.ts` — `ContextMenuCommand` class, required `type`, hooks, `toJSON()`.
-- `src/commands/applications/menucontext.ts` — `MenuCommandContext`, `target`, `InteractionTarget`, `GuildMenuCommandContext`, `isMenu*`, `inGuild`, response helpers, `modal`.
-- `src/commands/decorators.ts:24-32` — `CommandDeclareOptions` union (menu type omits `description`, requires `type`); `:139-149` `LowercaseDeclareName` (menu names not lowercased); `:195-231` `Declare`.
 - `src/commands/basecontext.ts` — base type-guard stubs (`isMenu`, `isMenuUser`, `isMenuMessage`, `isChat`).
-- `src/commands/applications/options.ts` — `AnyContext` union.
-- `src/structures/Interaction.ts:839-859` — `UserCommandInteraction`, `MessageCommandInteraction`.
 - `src/common/types/write.ts:78-80` — `ModalCreateOptions` (`waitFor`).
 - `src/builders/Modal.ts` — `Modal`, `TextInput` builders.
 - `src/commands/index.ts`, `src/structures/index.ts`, `src/index.ts` — root `'seyfert'` exports.
-
-## Agent Guidance
-
-- Always set `type: ApplicationCommandType.User` or `.Message` in `@Declare`; never pass `description` (the type rejects it). Do not trust the docs' claim that `type` can be omitted.
-- Parameterize the context with the matching interaction (`MenuCommandContext<UserCommandInteraction>` vs `<MessageCommandInteraction>`) so `ctx.target` narrows to `User` vs `Message`.
-- Cache `ctx.target` in a local const — it is a getter that rebuilds the structure on each access.
-- Context menu names support spaces/uppercase; only chat (slash) command names are lowercased.
-- `ctx.write`/`ctx.editOrReply` always go through the interaction; default return is `void`, pass `true` for the `WebhookMessageStructure`. Add `flags: 64` (Ephemeral) for private mod/utility replies.
-- Open modals with `ctx.modal(body, { waitFor })` to await a `ModalSubmitInteraction | null`; read fields off the returned submission (`getInputValue`, etc.).
-- In generic middleware over `AnyContext`, narrow with `ctx.isMenu()` then optionally `ctx.isMenuUser()`/`ctx.isMenuMessage()`; use `ctx.inGuild()` for guild-only narrowing.
-- Use `stop('reason')` (not the removed `pass()`) in middlewares; the denial lands in `onMiddlewaresError(ctx, error, metadata)` with `metadata.middleware` naming the offender.
-- `ctx.fullCommandName` for a menu is just the declared name (no subcommand path).

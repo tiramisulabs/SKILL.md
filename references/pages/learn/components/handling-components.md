@@ -163,7 +163,7 @@ declare function renderPage(page: number): string;
 
 `ctx.modal(builder)` opens the modal. Two ways to read the result:
 1. Fire-and-forget: open the modal here, handle the submit in a separate `ModalCommand` file (matched by the modal's `customId`).
-2. Inline: pass `{ idle }`/`{ timeout }` options to await the `ModalSubmitInteraction` right here.
+2. Inline: pass a `{ waitFor }` option to await the `ModalSubmitInteraction` right here.
 
 ```ts
 // components/openProfile.ts
@@ -259,22 +259,15 @@ collector.run('cancel', async i => {
 
 ## Source Anchors
 
-- `src/components/componentcommand.ts` — `ComponentCommand`, `componentType`, `customId`, `filter`, `_filter`, `cType`, `InteractionCommandType`, hooks.
-- `src/components/componentcontext.ts` — `ComponentContext`, getters (`message`, `customId`, `author`...), reply/update/modal methods, guards, `ContextComponentCommandInteractionMap`, `GuildComponentContext`.
-- `src/components/handler.ts` — `executeComponent`/`execute`, `createComponentCollector`, loader (`load`/`set`/`onFile`/`callback`), default-export requirement.
 - `src/components/index.ts` — barrel exports (`componentcommand`, `componentcontext`, `modalcommand`, `modalcontext`).
 - `src/builders/Button.ts`, `src/builders/SelectMenu.ts`, `src/builders/types.ts` — `setCustomId`, `setDisabled`, `ButtonLink` omit, `ComponentCallback`, `ListenerOptions`, `ComponentCollectorStopReason`.
-- `src/structures/Message.ts` — `createComponentCollector(options?)`.
 
 ## Agent Guidance
 
-- Use `ComponentCommand` for persistent components that must survive restarts (collectors live only in memory). For short-lived per-message flows use `message.createComponentCollector` instead.
 - The file MUST `export default` the class; the loader skips non-class / non-default exports and warns (`... doesn't export the class by export default <ComponentCommand>`).
-- Match the builder's `setCustomId(...)` value with the handler's `customId` (string or RegExp). Link/Premium buttons can't have a custom id and won't trigger handlers.
-- `componentType` selects the interaction kind; `customId`/`filter` narrow which custom ids. Encode params in a RegExp `customId` (e.g. `vote:123`) and parse inside `run`.
-- Use `ctx.update`/`ctx.deferUpdate` to mutate the originating message; `ctx.write`/`ctx.deferReply` create a new response. `editOrReply`/`write` return `void` unless you pass `true` as the second arg.
 - Always call exactly one ack per interaction (`update`, `deferUpdate`, `write`, or `deferReply`) or Discord shows "interaction failed".
 - Errors in `run` route to `onRunError` then `onAfterRun(ctx, error)`; uncaught/internal failures route to `onInternalError(client, component, error)`. Middleware denials route to `onMiddlewaresError(ctx, error, metadata)` where `metadata.middleware` names the denying middleware.
+- The handler already wraps `run()` in a try/catch, so don't add your own just to report an error. Set `components.defaults.onRunError` once (separately from `commands.defaults` — they're independent) or override `onRunError` on the class. With NEITHER, a thrown error is swallowed silently (no reply, no log). Full decision guide: `handling-errors.md` → "Decision: try/catch vs onRunError".
 
 ## Common patterns / gotchas
 

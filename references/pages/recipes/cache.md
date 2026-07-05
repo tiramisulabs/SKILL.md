@@ -234,20 +234,11 @@ The upstream async `Adapter` skeleton in the MDX is accurate against `src/cache/
 
 ## Source Anchors
 
-- src/cache/index.ts (Cache class, CacheFrom enum, DisabledCache, BulkGetKey, ReturnCache/InferAsyncCache, bulk*/testAdapter, onPacket dispatch, buildCache)
-- src/cache/adapters/types.ts (Adapter interface)
-- src/cache/adapters/default.ts (MemoryAdapter; relationships = Map<string, Set<string>>)
-- src/cache/adapters/limited.ts (LimitedMemoryAdapter, bucket option names)
-- src/cache/adapters/workeradapter.ts (WorkerAdapter)
 - src/cache/resources/default/{base,guild-based,guild-related}.ts (resource bases, flush defaults)
 - src/cache/resources/{users,members}.ts (structure vs raw return shapes)
-- src/collection.ts:233 (LimitedCollection)
-- src/client/base.ts:316-349,1388-1393 (ServicesOptions.cache, setServices disabledCache handling, refreshPluginCacheResources)
 - src/commands/applications/shared.ts:52 (InternalOptions, augment asyncCache)
-- src/index.ts (root barrel re-exports)
 
 ## Agent Guidance
 
-- All cache symbols import from `'seyfert'` (root). No deep `seyfert/lib/...` import needed for `Cache`, `CacheFrom`, `BaseResource`, `GuildBasedResource`, `GuildRelatedResource`, `Adapter`, `MemoryAdapter`, `LimitedMemoryAdapter`, `WorkerAdapter`, `LimitedCollection`, `DisabledCache`, `BulkGetKey`.
 - Module augmentation uses `interface SeyfertRegistry { client; middlewares; … }` in v5 — NOT `UsingClient`/`RegisteredMiddlewares` (derived). Augment `interface Cache { ... }` to add custom resources.
 - Redis adapter is an external package (tiramisulabs/extra redis-adapter) — verify its version in the target project; it must satisfy the local `Adapter` interface, and you must set `InternalOptions.asyncCache = true`.

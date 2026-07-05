@@ -262,25 +262,10 @@ test('id is deterministic', () => {
 
 ## Source Anchors
 
-- `src/commands/decorators.ts` (Declare/Options)
-- `src/commands/applications/chatcontext.ts` (CommandContext + reply methods, t getter, return types)
-- `src/commands/applications/options.ts` (createUserOption + siblings)
 - `src/commands/index.ts`, `src/components/index.ts`, `src/index.ts` (barrels)
-- `src/components/componentcontext.ts`, `src/components/modalcontext.ts`
-- `src/structures/Interaction.ts` (getInputValue base impl)
 
 ## Agent Guidance
 
-- Reach for fixtures to unit-test pure `run()` logic fast. They deliberately SKIP option parsing,
-  middlewares, permissions, components routing, REST, and events — for the full pipeline use the
-  [mock bot](/docs/testing/toolkit/mock-bot). Both live in `@slipher/testing` and coexist in one suite.
-- The package is external: add it as a dev dependency and **verify its version in the target project**;
-  do not assume helper signatures are stable across versions.
-- Declare the command in its own file exactly as shipped, then pass the **class** to
-  `mockCommandContext`/`mockScene`/`mockModalContext` so option types are inferred and `run()` is bound.
-- Assert via the `responses` sink (`lastResponse()`, `lastEmbed()`, `lastTexts()`, …) rather than spies.
-- When the real command touches client surfaces the mock does not model, override the field directly
-  (`ctx.guild = vi.fn(async () => …)`) or use `mockClient({ extra })` / `mockDeep<CommandContext>()`.
 - Use `mockScene` when assertions span linked entities (member↔user, channel↔guild); use bare factories
   when you just need one isolated entity with overridable ids; call `resetMockIds()` in `beforeEach`
   when a test asserts on a generated id.

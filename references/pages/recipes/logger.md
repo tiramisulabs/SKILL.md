@@ -239,22 +239,7 @@ export default class MyCommand extends Command {
 
 ## Source Anchors
 
-- `src/common/it/logger.ts` — `Logger` class, `LogLevels`, `LoggerOptions`, callbacks, file logging, `formatMemoryUsage`.
 - `src/common/index.ts:7` — barrel exporting `Logger`, `LogLevels`, `LoggerOptions`, `CustomizeLoggerCallback`, `AssignFilenameCallback`.
-- `src/index.ts` — root exports now include `Logger`, `LogLevels`, `LoggerOptions`, `CustomizeLoggerCallback`, and `AssignFilenameCallback` (forwarded from `./common`).
-- `src/client/base.ts:178/281/1300` — `client.logger` instance (`'[Seyfert]'`), `configureLogger`, `logger` client option.
 - `src/client/workerclient.ts:167` — worker client logger wiring.
 - `src/api/api.ts:119` + `src/api/shared.ts:44` — `client.rest.observe(...)` and observer payload shapes.
-- `src/common/shorters/webhook.ts:87` — `writeMessage` overloads/signature.
 - `src/builders/Embed.ts` + `src/common/types/resolvables.ts` — `setColor`/`setTimestamp`/`addFields`, `ColorResolvable` (`number` allowed).
-- `src/commands/applications/chat.ts:353` — `onRunError` signature.
-
-## Agent Guidance
-
-- Reach for `client.logger.{debug,info,warn,error,fatal}` inside commands/events; do not construct a new `Logger` for app logging — the client already owns one. Use a named `new Logger({ name })` only for isolated subsystems.
-- Configure level/name/file flags via `new Client({ logger: { ... } })` (v5) rather than mutating after start; the same option flows to worker clients.
-- To change format globally, call `Logger.customize` once at startup; keep the returned disposer if you need to revert. Chain via `Logger.getCustomizer()` to preserve existing behavior.
-- `Logger.saveOnFile`, `Logger.dirname`, `Logger.customizeFilename`, and `Logger.clearLogs` are STATIC (process-wide); per-instance file logging is the boolean `logger.saveOnFile` / the `saveOnFile` constructor option.
-- Import `LogLevels` (and `LoggerOptions`, callback types) from the `'seyfert'` root — they are re-exported there alongside `Logger`.
-- Logs below `logger.level` or when `active === false` are silently dropped; set the client `logger.logLevel` option to surface `Debug`.
-- Webhook reporting and REST-traffic logging are just core API usage (`client.webhooks.writeMessage` + `Embed`; `client.rest.observe`); no external package required.

@@ -265,13 +265,6 @@ api.shared.set(ledgerKey, () => new FasterLedgerService(), { override: true });
 
 ## Source Anchors
 
-- src/client/plugins.ts (createPlugin / definePlugins / createPluginFactory / re-exports; capability
-  validation at :360)
-- src/client/plugins/shared.ts (createSharedKey, addPluginShared, createSharedRegistry, dispose)
-- src/client/plugins/api.ts (api.shared, api.has, api.diagnostics.warn)
-- src/client/plugins/types.ts (SharedKey, SharedValue, PluginSharedRegistry, PluginSharedOptions,
-  PluginRequirementInput, SemverRange, RegisteredPluginShared, SeyfertPlugin, PluginDiagnostics)
-- src/client/plugins/registry.ts (validatePluginRequirements, hasPluginRequirement, semver matching)
 - src/client/base.ts (client.shared)
 
 ## Common patterns / gotchas
@@ -299,8 +292,6 @@ api.shared.set(ledgerKey, () => new FasterLedgerService(), { override: true });
 
 ## Agent Guidance
 
-- Default to shared state for plugin-to-plugin services; reserve `client`/`ctx` extension maps for
-  things end users call directly on the client/context.
 - When writing a reusable plugin pair, ship the `SharedKey` as a named export so consumers can both
   `requires: [{ capability: key }]` and `client.shared.unwrap(key)` with full typing.
 - Read diagnostics during development: log `client.plugins.diagnostics.flatMap(d => d.messages)` to

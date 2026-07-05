@@ -218,13 +218,13 @@ client.hoshimi.on('queueEnd', (player) => {
 - **Narrow to guild early.** Music is guild-only — `if (!ctx.inGuild()) return;` (or type the handler as `GuildCommandContext`) so `guildId`/`member`/`ctx.me()` are non-undefined; no `?.` sprinkling.
 - **`createPlayer` is sync, `connect` is async.** `const player = client.hoshimi.createPlayer({...}); await player.connect();` — then `search`/`queue.add`/`play`.
 - **`sendPayload` needs the shard id first.** `this.gateway.send(this.gateway.calculateShardId(guildId), payload)` — `calculateShardId` maps the guild to its shard; passing the guild id directly is wrong.
-- **Type the manager on `SeyfertRegistry.client`, not `interface Client`.** The v4/kazagumo pattern (`interface Client { kazagumo }`) is gone; use the `Client` subclass + `ParseClient<MusicClient>` or the `& { hoshimi: Hoshimi }` intersection so `client.hoshimi` is typed in every command/event.
+- **Type the manager on `SeyfertRegistry.client`, not `interface Client`.** The old v4 pattern (`interface Client { <manager> }`) is gone; use the `Client` subclass + `ParseClient<MusicClient>` or the `& { hoshimi: Hoshimi }` intersection so `client.hoshimi` is typed in every command/event.
 - **Pin the version.** hoshimi is pre-1.0 (`0.3.x-dev`); options/enums/events shift across builds. Verify `SearchSources`, `LoadType`, event names, and player methods against the installed package.
 
 ## Doc vs Source Corrections
 
 - **`SearchEngines` / `defaultSearchEngine` do not exist.** The upstream MDX imports `SearchEngines` and passes `defaultSearchEngine: SearchEngines.Youtube`, but hoshimi's type exports have **no `SearchEngines`** — the enum is `SearchSources` and the option is `defaultSearchSource` (`HoshimiOptions.defaultSearchSource?: SearchSource`, default `SearchSources.Youtube`). Confirmed against `dist/index.d.cts` (the `Hoshimi` constructor docstring itself uses `defaultSearchSource: SearchSources.Youtube`). Use `SearchSources` / `defaultSearchSource`.
-- **Augmentation moved to `SeyfertRegistry.client`.** The old recipe augmented `interface Client { kazagumo: Kazagumo }` directly; the v5 hoshimi setup types the manager through `SeyfertRegistry.client` (subclass or intersection). Augmenting a bare `interface Client` no longer wires `client.hoshimi` typing in v5.
+- **Augmentation moved to `SeyfertRegistry.client`.** The old v4 recipe augmented `interface Client { <manager> }` directly; the v5 hoshimi setup types the manager through `SeyfertRegistry.client` (subclass or intersection). Augmenting a bare `interface Client` no longer wires `client.hoshimi` typing in v5.
 - **`SearchSources` values are Lavalink search prefixes** (`Youtube="ytsearch"`, `Spotify="spsearch"`, …) and depend on server-side plugins (youtube-source, lava-src) being installed on the Lavalink node.
 
 ## Source Anchors
@@ -238,5 +238,4 @@ client.hoshimi.on('queueEnd', (player) => {
 - Use when adding music/voice playback to a Seyfert bot. Seyfert only provides the gateway + command plumbing; hoshimi is the Lavalink v4 client and needs a running Lavalink node (`localhost:2333` in examples).
 - Type `client.hoshimi` via `SeyfertRegistry.client` (subclass `ParseClient<MusicClient>` or `ParseClient<Client<true>> & { hoshimi: Hoshimi }`). Requires the declare-module setup to be loaded — see `learn/getting-started/declare-module`.
 - Import runtime values (`Hoshimi`, `SearchSources`, `LoadType`, `LoopMode`, `EventNames`) and types (`PlayerStructure`, `TrackStructure`, `QueryResult`, packet types) from `'hoshimi'` — none of these are on `'seyfert'`.
-- Do NOT copy the docs' `SearchEngines` / `defaultSearchEngine`; they don't exist — use `SearchSources` / `defaultSearchSource`.
 - Always `player.destroy()` when the channel empties or on `queueEnd` if you don't idle; forward the `raw` event and call `init()` on `botReady`, or nothing plays.

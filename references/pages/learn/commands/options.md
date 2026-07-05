@@ -233,34 +233,18 @@ The remaining factories (`createNumberOption`, `createBooleanOption`, `createUse
 - `as const` on `choices` (and `channel_types`) is what gives you the literal value union in `ctx.options`. Without it you get the wide `string`/`number`/`ChannelType` type. The MDX omits `as const` on the integer-choices example — add it for the same inference the string example gets.
 - Autocomplete value types are bound to the option type in v5: a numeric option's `respond([...])` rejects `{ value: 'four' }`; map to a `number`. `getInput()` is ALWAYS a string regardless of option type (it's the raw focused text) — convert with `Number(...)` when filtering numeric suggestions.
 - `choices` and `autocomplete` are mutually exclusive per Discord — set one, not both, on a single option.
-- Only String/Integer/Number support `choices`/`autocomplete`; only String supports `min_length`/`max_length`; only Integer/Number support `min_value`/`max_value`.
 - `value()`'s `data.value` is the RAW resolved value before your transform. `ok(x)` replaces the stored value with `x` (its type flows into `ctx.options`); `fail('msg')` rejects and dispatches `onOptionsError(ctx, metadata)`. For prefix/text commands, `metadata[name].parseError` carries a typed `MessageCommandOptionErrors` tuple; slash commands populate `value`/`failed` only.
-- `required: true` makes the option non-optional in `CommandContext<typeof options>`; leaving it off yields `T | undefined`. Define options as a named `const` and pass `CommandContext<typeof options>` to `run` to get full typing.
 - Subcommand-based commands use the array overload: `@Options([SubA, SubB])` where each is a `SubCommand` class — not a record.
 
 ## Doc vs Source Corrections
 
-- The MDX integer/number choice examples omit `as const` while the string example includes it. Source types `choices` as `readonly SeyfertChoice<...>[]` in every choiceable factory (options.ts:148/156/164), so `as const` is needed on ALL choice arrays (string, integer, number) for literal value inference. Docs are inconsistent, not wrong.
 - The MDX never shows the reject path. Source confirms the third `value()` arg is `StopFunction = (error?: string | null) => void` (shared.ts:20); a rejection routes to `command.onOptionsError(context, metadata: OnOptionsReturnObject)` (chat.ts:354, handle.ts:425/755).
-- `channel_types` accepts a `readonly` array (options.ts:140), so `as const` works there too.
 - v5: autocomplete `respond()` choice values are now typed to the option's `ValueType` (changelog "Autocomplete choice types") — numeric options reject string values. The pre-v5 docs predate this constraint.
 
 ## Source Anchors
 
-- `src/commands/applications/options.ts` — all `create*Option` factories, `SeyfertBasicOption`/`SeyfertBaseChoiceableOption`, `SeyfertChoice`, `ValueCallback`, per-type interfaces.
-- `src/commands/applications/chat.ts` — `ReturnOptionsTypes`, `AutocompleteCallback`/`OnAutocompleteErrorCallback`, `OptionsRecord`, `ContextOptions`, `onOptionsError` signature.
-- `src/commands/applications/shared.ts` — `OKFunction`, `StopFunction`, `SeyfertChannelMap`, `OnOptionsReturnObject`, `MessageCommandOptionErrors`, `DefaultLocale`.
-- `src/commands/decorators.ts` — `Options` overloads (161-163), `LowercaseOptionsRecord` (135-137).
-- `src/structures/Interaction.ts` — `AutocompleteInteraction.getInput` (461), `respond` (465).
 - `src/commands/optionresolver.ts` — focused-value resolution and per-type value parsing.
 
 ## Agent Guidance
 
-- Always supply `description` — the only mandatory field on every option.
-- Use lowercase option keys; `Options` enforces `Lowercase` keys at the type level (decorators.ts:135).
-- Add `as const` to every `choices` array (and `channel_types`) for literal types in `ctx.options`.
-- Mark options `required: true` to make them non-optional in `CommandContext<typeof options>`.
-- Choices vs autocomplete are mutually exclusive; only String/Integer/Number support either, plus min/max.
-- In `value()`, call `ok(x)` to transform/store and `fail('msg')` to reject; handle rejections in `onOptionsError(ctx, metadata)`.
-- Autocomplete `respond()` values must match the option type (string vs number); `getInput()` returns a string.
 - All factories and `Options`/`Command`/`CommandContext`/`ChannelType` import from the root `'seyfert'` — no deep import needed.

@@ -295,21 +295,9 @@ export default class TicketHandler extends ModalCommand {
 
 ## Source Anchors
 
-- src/builders/Modal.ts (Modal, TextInput)
-- src/builders/Label.ts (Label, LabelBuilderComponents)
-- src/builders/TextDisplay.ts, FileUpload.ts, Checkbox.ts, CheckboxGroup.ts, RadioGroup.ts
-- src/builders/SelectMenu.ts (StringSelectMenu, StringSelectOption, BuilderSelectMenus)
-- src/builders/types.ts (ModalBuilderComponents = Label | TextDisplay, ModalSubmitCallback)
 - src/builders/index.ts, src/index.ts (root exports)
-- src/components/modalcommand.ts, src/components/modalcontext.ts
-- src/structures/Interaction.ts (ModalSubmitInteraction getters)
-- src/common/types/write.ts (ModalCreateBodyRequest, ModalCreateOptions)
 
 ## Agent Guidance
 
-- Top level of a modal accepts only `Label` and `TextDisplay`. Every INTERACTIVE component (TextInput, any select menu, FileUpload, Checkbox, CheckboxGroup, RadioGroup) MUST be wrapped in its own `Label.setComponent(...)`. Putting a raw select menu/TextInput directly into `setComponents` is a type error.
-- Prefer the `customId` property over `filter()` for simple exact/RegExp matches; combine both when you need RegExp matching plus extra logic. Without either, the handler matches every modal submit.
-- Read values by the wrapped component's customId: `getInputValue` (text/select), `getRadioValues` (single string), `getCheckboxValues` (string[]), `getCheckbox` (boolean), `getFiles` (Attachment[]), and resolved `getUsers/getRoles/getChannels/getMentionables`. Pass `required: true` to throw when absent, else handle `undefined`/`void`.
-- Remember `getInputValue` may return `string[]`; narrow before using as a plain string.
 - For one-off flows use `ctx.modal(modal, { waitFor })` and respond to the returned submission; for reusable flows define a `ModalCommand` class file.
-- Modals are interaction-only: never try to open one from a prefix command context.
+- A thrown error in `run()` routes to `onRunError` → `onAfterRun` — the handler wraps `run()` for you, so don't add a `try/catch` just to report it. Set `modals.defaults.onRunError` once (it's separate from `commands.defaults`/`components.defaults`) or override `onRunError` on the class; with none of them a modal error is swallowed silently. Full decision guide: `handling-errors.md` → "Decision: try/catch vs onRunError".

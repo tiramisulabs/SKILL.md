@@ -269,12 +269,7 @@ test('greeting resolves per locale', async () => {
 
 ## Source Anchors
 
-- `src/commands/decorators.ts` (Declare/Options/Middlewares/AutoLoad)
-- `src/commands/applications/options.ts` (option creators, autocomplete typing)
-- `src/commands/applications/chat.ts` (Command, hooks at 349-355), `src/commands/applications/chatcontext.ts` (CommandContext: write 88, modal 99, deferReply 107, editResponse 126, editOrReply 145, followup 156, t 72)
-- `src/commands/applications/shared.ts:55` (createMiddleware `{ context, next, stop }`, no `pass`)
-- `src/commands/handle.ts`, `src/commands/handler.ts` (permission-fail hook dispatch + defaults)
-- `src/common/shorters/bans.ts:56` (BanShorter.create + resolveBanOptions), `src/client/base.ts` (bans shorter wiring)
+- `src/client/base.ts` (bans shorter wiring)
 - `src/index.ts` / `src/commands/index.ts` (root + command barrel exports)
 
 ## Agent Guidance
@@ -285,8 +280,6 @@ test('greeting resolves per locale', async () => {
 - The command code you test is plain seyfert: decorators, option creators, CommandContext, hooks.
   Those are stable and verified here; if a test fails, suspect the toolkit binding or a recent
   core change, not these signatures.
-- When authoring the command-under-test, follow v5 rules: lowercase option keys, `stop()`/`stop('reason')`
-  for middleware (never `pass()`), camelCase `BanOptions`, readonly option/middleware arrays.
 - Reach for `bot.actor(...)` for multi-step flows (poll → click button → results) so later
   dispatches see earlier in-process state; use `outcome(result).get.denial(...)` / `.get.error(...)`
   to assert intent instead of digging through the raw action list.

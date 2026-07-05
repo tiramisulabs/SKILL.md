@@ -419,19 +419,9 @@ export default class Pages extends Command {
 
 ## Review Checklist
 
+Beyond the gotchas above, verify:
+
 - [ ] Imported every builder/enum/`Formatter` from `'seyfert'` root — no deep imports.
 - [ ] Correct class names: `AttachmentBuilder`, `PollBuilder`, `TextInput` (from Modal), `MediaGalleryItem`.
-- [ ] `Formatter.codeBlock(content, language)` content FIRST; `emojiMention(id, name)` id FIRST; `Formatter` no `new`.
-- [ ] Serialize with `.toJSON()`, not `.json()`; only on send (throws if required fields unset).
-- [ ] v2 layout messages set `flags: MessageFlags.IsComponentsV2` on send AND every edit; no top-level content/embeds.
-- [ ] `Spacing` only `Small`/`Large`; `Separator.setDivider` default `false` — pass explicitly.
-- [ ] Section has an accessory; MediaGalleryItem has media; Checkbox/RadioGroup have 2-10 options.
-- [ ] `Container` children are rows/text/sections/gallery/separator/file — never a bare `Button`.
-- [ ] ActionRow: ≤5 buttons OR 1 select; no nesting; typed `<Button>`/`<StringSelectMenu>`.
-- [ ] Set `customId` on interactive components; link buttons use `setURL`+`ButtonStyle.Link` (no customId).
 - [ ] Poll uses `allowMultiselect` (not `setMultiSelect`); has a question + answers.
-- [ ] `RadioGroupOption`/`CheckboxGroupOption` constructed with `{ label, value }` (no empty ctor).
-- [ ] `setColor`: validate user input (unknown string → black; negative/non-int/malformed hex throws).
-- [ ] Reference uploads via `attachment://<name>` matching `setName(...)`; pass in `files: [...]`.
-- [ ] Need the sent `Message` (e.g. for a collector)? Pass the response flag: `ctx.write(body, true)`.
 - [ ] No `editResponse` on `ComponentContext` (removed in v5) — use `editOrReply`/`update`.

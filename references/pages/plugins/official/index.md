@@ -202,16 +202,8 @@ const presencePlugin = createPlugin({
 
 ## Source Anchors
 
-- src/index.ts (root re-exports `./client`)
-- src/client/index.ts:13 (`export * from './plugins'`)
-- src/client/plugins.ts:240-289 (createPlugin, createPluginFactory, definePlugins)
-- src/client/plugins/types.ts:32 (SeyfertRegistry), :69-74 (PluginOrder/PluginOrderOpt), :354-357 (PluginMiddlewareOptions), :373-477 (SeyfertPluginApi), :479-481 (SeyfertPluginTeardownApi), :492-512 (SeyfertPlugin)
-- src/client/plugins/api.ts:99-105, :455-462, :524-529, :610-612 (teardown/cache/langs guard throws)
 - src/client/plugins/{errors,order,registry,shared}.ts (internals)
 
 ## Agent Guidance
 
 - Treat this page as a directory: for "what official plugins exist" answer from the catalog; for any specific package defer to its own guide and the installed typings (versions drift — always `verify version in target project`).
-- To wire a plugin, the verified core shape is authoritative: author with `createPlugin` (or `createPluginFactory` for configurable/external-style ones), pass results to `definePlugins(...)` in `new Client({ plugins })`, and augment `declare module 'seyfert' { interface SeyfertRegistry { plugins: [...] } }` so client/context/shared types resolve.
-- Do not conflate adapters with plugins — adapters go to `setServices`/cache/server/rest/gateway options, not `plugins`.
-- Remember the v5 lifecycle constraints: identity helpers don't validate; teardown api is read-only; `cache.resource`/`langs.contribute` throw on misuse; middlewares use `stop()` not `pass()`.

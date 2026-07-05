@@ -270,28 +270,11 @@ export const databasePlugin = createPlugin({
 
 ## Source Anchors
 
-- src/client/plugins.ts (createPlugin:240, definePlugins:283, createPluginFactory:267,
-  setupClientPlugins:656, teardownClientPlugins:717)
-- src/client/plugins/types.ts (SeyfertRegistry:32, PluginClientMap:244, PluginContextMap:250,
-  SeyfertPlugin:492)
-- src/client/plugins/types.ts (SeyfertPluginApi.middlewares.add:431, PluginMiddlewareOptions.global:354, SeyfertPlugin.register:509/setup:510/teardown:511)
 - src/client/plugins/api.ts (register-time `api` surface, teardown restrictions)
 - src/commands/applications/options.ts:213 (createMiddleware)
-- src/client/index.ts:13, src/index.ts:1 + :68 (root re-exports; createEvent)
 
 ## Agent Guidance
 
 - Use this when wiring any datastore into a Seyfert v5 bot. Prefer the plugin pattern over
   augmenting `Client` by hand — `client` map gives app-wide typed access, `ctx` map gives
   ergonomic per-interaction helpers, and `SeyfertRegistry.plugins` propagates both types.
-- Gotcha: the `ctx` factory runs **synchronously** before `run()`. If you need an async DB
-  read, the factory must return a function (`(interaction) => async () => {...}`), then call
-  `await ctx.helper()` in the command. Returning the awaited value directly from the factory
-  will not work — the factory itself cannot be awaited.
-- Open the connection in `setup`, not `register` (register is sync and runs before the client
-  is fully wired). Close it in `teardown` for clean shutdown.
-- `client` map keys must not collide with reserved client members; `ctx`/`shared`/cache
-  resource names are guarded (`assertSafePluginResourceName`, reserved-name sets in
-  src/client/plugins/api.ts) and throw on conflict.
-- The DB driver itself (Prisma/Drizzle/Mongoose/…) is NOT part of core Seyfert — verify its
-  version and API in the target project. `DatabaseClient` here is a placeholder.

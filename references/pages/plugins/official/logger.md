@@ -231,19 +231,6 @@ Any evlog drain works — Axiom, OTLP, Sentry, fs, or a custom pipeline.
 
 ## Source Anchors
 
-- `src/client/plugins.ts` (definePlugins 283-289, createPlugin 240-265, createPluginFactory, lifecycle, createContextScope)
-- `src/client/plugins/types.ts` (SeyfertRegistry:32, PluginContextMap:250, RegisteredPlugins:286, PluginContextMapOf, ExtendOf/ContextOf)
 - `src/client/plugins/api.ts` (plugin API surface; reserved context keys)
-- `src/commands/applications/options.ts` (createMiddleware:213)
-- `src/commands/decorators.ts` (Declare, Middlewares, registry-derived middleware names)
 - `src/commands/applications/shared.ts` (SeyfertRegistry consumption for langs/client/middlewares)
 - `src/client/index.ts` (`export * from './plugins'`)
-
-## Agent Guidance
-
-- This is an EXTERNAL plugin. Before editing production code, install it from the target project's package manager and inspect the installed `@slipher/logger` types — do not assume option names beyond what is listed here.
-- `ctx.logger` only exists once the plugin is installed AND `SeyfertRegistry { plugins: typeof plugins }` is augmented (it is provided through the plugin `ctx` map). Without the augmentation TypeScript will not see `ctx.logger`.
-- Use `.add()` for fields on the single per-interaction wide event; use level methods for immediate, separate entries. Never `emit()` inside a handler — the plugin owns that lifecycle.
-- For shared helpers, reach for `useLogger()` instead of threading `ctx` through every call — it reads the active scope and enriches the same wide event.
-- Don't confuse `client.logger` (core Seyfert logger) with the plugin's `ctx.logger` wide-event logger.
-- Redaction lives in the sink/adapter, not in the console adapter; add a Discord-token pattern when using evlog.

@@ -273,32 +273,14 @@ test('shows the fetched balance', async () => {
 - v5 reminder enforced in examples above: lowercase option keys, `as const` on `choices`,
   and `void` returns from `write`/`editOrReply` (assert on `ctx.responses`, not the return).
 
-## Source Anchors
-
-- src/index.ts:21 (root re-export of `./commands`)
-- src/commands/index.ts (commands barrel)
-- src/commands/decorators.ts:161-163, 195 (`Options`, `Declare`)
-- src/commands/applications/chat.ts:361 (`Command`)
-- src/commands/applications/options.ts:146, 154, 178, 184 (`createStringOption`, `createIntegerOption`, `createBooleanOption`, `createUserOption`)
-- src/commands/applications/chatcontext.ts:68, 88, 99-101, 107, 126, 145, 156 (`options`, `write`, `modal`, `deferReply`, `editResponse`, `editOrReply`, `followup`)
-- src/langs/router.ts:60 (`ctx.t` / `SeyfertLocale.get`)
-
 ## Agent Guidance
 
 - Use this fixture path when you only care about the logic inside one `run()` — branching,
   the reply body, stub calls. It is dramatically faster than the mock bot because nothing
   boots; each test is one function call.
-- Rule of thumb: pure `run()` logic -> fixtures. Anything touching option parsing,
-  middlewares, permissions, components, or events -> the mock bot
-  (`/docs/testing/writing-tests/setup`).
 - Mock services/IO (DB, REST, economy) with `vi.spyOn` so the test stays a pure function
   call; assert both the call (`toHaveBeenCalledWith`) and the reply (`ctx.responses`).
 - For multi-reply commands, assert `ctx.responses` length and order; use `clearResponses()`
   to reuse one fixture across phases.
-- Prefer the class form `mockCommandContext(BanCommand, { options })` over the object form:
-  it infers option types and binds the command, removing manual generics and casts.
-- Gotcha: `@slipher/testing` is a third-party package, NOT shipped by seyfert. It is not in
-  this repo. Install it separately and pin/verify its version in the target project; its API
-  may drift independently of core Seyfert.
 - The command file used in tests must be the REAL command (real `@Declare`/`@Options`); do
   not rewrite it for testing. The default-export class is imported directly.

@@ -236,19 +236,8 @@ test('greet', async () => {
 - The `@slipher/testing` surface (`createMockBot` + all options, `bot.slash`/`clickButton`/`selectMenu`/`emit`, `result.*`, `bot.world`) is NOT in core Seyfert and cannot be source-verified; treat the MDX as authoritative and confirm the installed version's API in the target project.
 - Freshness note (not a doc error): on `more-qol`, `createStringOption` choices and `Options` arrays now accept `readonly`; doc examples type-check unchanged.
 
-## Source Anchors
-
-- `src/index.ts` (root barrel — `export * from './commands'`; `createEvent` at `:68`)
-- `src/commands/applications/chat.ts` (`Command`, `SubCommand`)
-- `src/commands/decorators.ts` (`Declare`, `Options`)
-- `src/commands/applications/options.ts` (`createStringOption` and siblings)
-- `src/commands/applications/chatcontext.ts` (`CommandContext`, `write`, `options`, `fetchResponse`)
-- `src/builders/ActionRow.ts`, `src/builders/Button.ts` (component builders)
-- `src/structures/Message.ts:76` (`createComponentCollector`), `src/common/shorters/users.ts:46` (`users.write`)
-
 ## Agent Guidance
 
 - Use this page when a user wants to unit/integration test Seyfert commands/components/events without a live gateway. The mechanism is the external `@slipher/testing` package — always have the user install it as a dev dependency (`pnpm add -D @slipher/testing`) and verify its installed version, since its API is not pinned by core Seyfert.
-- The command/component/event-authoring half is fully standard Seyfert; the same code runs in production. Don't introduce test-only shapes.
 - Do not invent `createMockBot` options or `result`/`bot` methods beyond those listed (sourced from the toolkit reference). When unsure, point the user at The Toolkit > Mock bot / Dispatching reference pages.
 - For deeper flows, route users to sibling pages: `writing-tests/commands`, `writing-tests/components` (buttons/selects/collectors), `writing-tests/events`, `writing-tests/modals`, and `toolkit/*` (mock-bot, dispatching, world, gateway, assertions).

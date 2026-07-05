@@ -271,26 +271,4 @@ export default class Dev extends Command { /* ... */ }
 
 ## Source Anchors
 
-- `src/index.ts` (root barrel: `export * from './commands'`, `./types`, `Client` re-export)
-- `src/commands/decorators.ts` (`Declare`, `Options`, `Middlewares`, `middlewares`)
-- `src/commands/applications/options.ts` (`createBooleanOption`/`createStringOption` + sibling creators, choices/validators)
-- `src/commands/applications/chat.ts` (`Command`, `AutocompleteCallback`)
-- `src/commands/applications/shared.ts` (`UsingClient`, `RegisteredClient`, `ParseClient`)
-- `src/client/plugins/types.ts` (`SeyfertRegistry`)
-- `src/commands/applications/chatcontext.ts` (`write`, `deferReply`, `editOrReply`, `editResponse`, `followup`, `modal`, `inGuild`, `channel`, `fetchMember`)
-- `src/commands/basecontext.ts` (`ctx.client`, `ctx.options`)
-- `src/structures/Interaction.ts` (`AutocompleteInteraction.respond`)
-- `src/client/base.ts` (`uploadCommands`, `gateway` field)
-- `src/client/client.ts` (`start`)
-- `src/websocket/discord/sharder.ts` (`get latency`)
 - `tests/command-context-client-type.test.mts` (confirms `ParseClient<Client<true>>` augmentation contract)
-
-## Agent Guidance
-
-- Commands must be a default-export class extending `Command` (or `SubCommand` / context-menu / entry-point variants) inside the configured commands folder; Seyfert loads them on `start()`.
-- `@Declare` requires `name` + `description` for chat-input commands; the name is forced lowercase at the type level. For user/message context menus, use `@Declare({ type: ApplicationCommandType.User | .Message, name })` (no description).
-- Always type the options generic: `CommandContext<typeof options>`.
-- Reply with `ctx.write` for the first response; use `ctx.editOrReply` / `ctx.followup` for later messages. Ephemeral = `flags: MessageFlags.Ephemeral`.
-- `start()` ≠ register. Call `uploadCommands` (commonly chained after `start()`); `cachePath` avoids redundant uploads via a JSON diff. Use `guildId` in `@Declare` for instant dev registration.
-- `ctx.client.gateway` only exists on the gateway `Client`; augment `SeyfertRegistry` accordingly. Without the augmentation, `ctx.client` falls back to `BaseClient`.
-- `more-qol` branch notes: `@Options` / middleware decorators accept readonly arrays; middleware `pass()` was replaced by `stop()` (no arg = silent skip).

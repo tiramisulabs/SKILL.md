@@ -132,8 +132,7 @@ Open only what the task needs:
 | Plugin authoring: `createPlugin`/`definePlugins`, lifecycle, runtime hooks, services/requirements, ordering, diagnostics, official `@slipher/*` plugins | `references/plugins.md` |
 | i18n/langs, cache (adapters/resources), structures/transformers, and recipes (DB, logger, API access, monetization, music, yuna) | `references/i18n-cache-recipes.md` |
 | Testing with `@slipher/testing` (mock bot, dispatching, world, assertions, fixtures, gateway, defaults) + local unit tests | `references/testing.md` |
-| Per-page deep notes for a specific docs URL | `references/pages/index.md` → matching page note |
-| URL-by-URL coverage/verification audit | `references/link-verification-matrix.md` |
+| Per-page deep notes for a specific docs URL (each page's source URL, coverage ref, and verification label live in its header + `pages/index.md`) | `references/pages/index.md` → matching page note |
 
 ## Implementation Defaults
 

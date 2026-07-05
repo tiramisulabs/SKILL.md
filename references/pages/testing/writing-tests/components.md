@@ -225,13 +225,6 @@ await interaction.update({ content: 'Got it' });
 
 ## Source Anchors
 
-- src/builders/ActionRow.ts (addComponents)
-- src/builders/Button.ts (setCustomId/setStyle/setLabel/...)
-- src/builders/SelectMenu.ts (StringSelectMenu setOptions:303 / addOption:293, StringSelectOption:332)
-- src/structures/Message.ts (createComponentCollector)
-- src/components/handler.ts (collector return run/stop/waitFor/resetTimeouts:115-172, onComponent:174)
-- src/components/componentcontext.ts (write:96, update:121, deferUpdate:117, fetchResponse:144, message getter:87, NO editResponse)
-- src/components/componentcommand.ts (componentType:17, customId:18, filter:19, run:20, middlewares readonly:33, onInternalError(client, component, error):49)
 - src/index.ts (barrel exports: builders, commands, components, types)
 - tests/plugin-authoring-contract.ts (confirms `@slipher/testing` is NOT a core Seyfert dep)
 
@@ -244,8 +237,3 @@ await interaction.update({ content: 'Got it' });
   (`id` = string | array | RegExp; also `waitFor`, `stop`, `resetTimeouts`, options `timeout`,
   `idle`, `filter`, `onPass`, `onStop`, `onError`); (2) global **`ComponentCommand`** file matched
   by `customId` + `filter`. Both are dispatched the same way by the toolkit.
-- v5 reminders to apply when generating component code: `setOptions(...)` is rest-param; no
-  `ComponentContext.editResponse`; `onInternalError(client, component, error)`; collectors fire
-  every matching handler (no `break`).
-- Before relying on toolkit signatures in real code, confirm the installed `@slipher/testing`
-  version — its API is not pinned by core Seyfert.

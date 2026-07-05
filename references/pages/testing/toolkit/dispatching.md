@@ -207,20 +207,7 @@ expect(result.reply?.body).toMatchObject({ type: InteractionResponseType.Channel
 ## Source Anchors
 
 - `src/index.ts` (root barrel; `createEvent`, `export * from './types'`, `./api`, `./commands`)
-- `src/types/payloads/_interactions/responses.ts:71-83` (`InteractionResponseType` enum; `ChannelMessageWithSource = 4`)
-- `src/client/plugins/types.ts:32` (`SeyfertRegistry`), `:286` (`RegisteredPlugins`)
-- `src/commands/decorators.ts:14-20` (`RegisteredMiddlewares`, `ResolvedRegisteredMiddlewares`), `:184` (`middlewares(...)` helper)
-- `src/commands/applications/shared.ts:20` (`StopFunction`), `:26` (`DefaultLocale`), `:57-58` (`{ next, stop }` middleware payload — no `pass`)
-- `src/commands/applications/options.ts:213` (`createMiddleware`)
-- `src/api/index.ts`, `src/api/Router.ts` (route types vs runtime proxy — no `Routes` value export)
-- `src/events/handler.ts:252` (camelCase `ClientNameEvents`)
-- `src/commands/optionresolver.ts` (resolved-entity reading)
 
 ## Agent Guidance
 
-- Treat this page as EXTERNAL: the dispatch surface lives in `@slipher/testing`. Confirm the package is installed and pin/verify its version before relying on exact signatures; the only hard guarantees from core Seyfert are the augmentation interface (`SeyfertRegistry`), the `InteractionResponseType` enum, `createMiddleware`/`stop` semantics, and the command/event pipeline behavior.
 - When writing the `Routes.ban` matcher, do not auto-suggest `import { Routes } from 'seyfert'` — it will not resolve. Point users to the toolkit's matcher import (or `discord-api-types` `Routes`), or a predicate over the recorded action body.
-- Always author middleware fixtures with v5 `stop()` (not `pass()`); show `createMiddleware(({ context, next, stop }) => ...)`.
-- Use the `*Option(apiUser(...))` builders for entity options, not bare ids.
-- Prefer typed result views (`result.content`, `result.embedView`, `result.component(...)`) for behavior assertions; reserve raw shapes (`result.reply?.body`, `result.embeds`) for wire-contract tests.
-- Repeat the execution-model gotchas: lazy dispatch, `.until()` before `await`, awaiting releases checkpoints, dispatches don't reject on command errors, `emit` throws on no-handler unless `{ allowNoHandler: true }`.

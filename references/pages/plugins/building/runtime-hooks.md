@@ -265,19 +265,10 @@ export const trafficPlugin = createPlugin({
 
 ## Source Anchors
 
-- `src/client/plugins/api.ts` — `createPluginApi`: autocomplete/gateway/rest/langs/hooks/events hook impls + diagnostics + `assertCanMutate`/`isValidLangPrefix`.
-- `src/client/plugins/types.ts` — `SeyfertPluginApi`, `SeyfertPluginTeardownApi`, `SeyfertPluginHooks`, `PluginAutocompletePayload`, `PluginGatewaySendPayload`, `PluginGatewayDispatchMeta/Next/Interceptor`, `PluginUploadCommandsMetadata`, `PluginIntentResolvable`, `PluginLangOptions`, `PluginOrder`, `PluginLoadedMetadata`.
-- `src/client/plugins.ts` — runtime executors `runPluginAutocompleteWrappers` (471), `applyPluginGatewayDispatchInterceptors` (560, multi-next throw at 577), `applyPluginGatewaySendPayloadWrappers` (621); barrel re-exports of `createPlugin`/`definePlugins`/`PluginOrder`.
-- `src/api/shared.ts` — `RestObserver` + payload interfaces (confirms no `route`; `RestObserverRatelimitPayload` carries `response`).
 - `src/events/event.ts` — `CustomEvents.uploadCommands` signature.
 - `src/client/base.ts` — `uploadCommands()` emits the custom event with the metadata.
 
 ## Agent Guidance
 
-- Use runtime hooks ONLY for framework-level packages; for app logic prefer regular events + shared state.
-- Register all hooks in `register(api)` (or `setup`'s `api` arg). Mutating during `teardown` throws.
 - For lifecycle reactions (load/ready/close) use `api.hooks.on`; for Discord/custom events use
   `api.events.on`; for command-deploy telemetry use `api.events.on('uploadCommands', ...)`.
-- Return `null` to veto, `undefined`/`void` to keep; vetoes surface as plugin diagnostics, not silently.
-- Save disposers from `onDispatch`/`rest.observe`/`hooks.on`/`events.*` only for runtime detach.
-- Reach for `{ order }` when relative ordering against other plugins matters (lower / `Before` first).

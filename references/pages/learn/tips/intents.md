@@ -22,6 +22,7 @@ In v5 you can also pass intents inline at startup via `client.start({ connection
 - `config.bot(data: RuntimeConfig)` — `config` exported from `'seyfert'`. Eagerly resolves `data.intents` through `resolveGatewayIntents`, storing a numeric bitfield on the returned config (`base.ts:1234`).
 - `type RuntimeConfig` — `src/client/base.ts:1384`: `OmitInsert<InternalRuntimeConfig, 'intents', { intents?: GatewayIntentInput }>` — i.e. the public `config.bot(...)` shape; its `intents` field is optional `GatewayIntentInput`. Internally stored as `intents: number` (`InternalRuntimeConfig`, `base.ts:1383`). `config.http(...)` configs OMIT `intents` entirely (`InternalRuntimeConfigHTTP`, `base.ts:1375`).
 - `StartOptions.connection` — `src/client/base.ts:1341`: `{ intents: GatewayIntentInput }`. Passed via `client.start({ connection: { intents } })`; overrides the config intents at runtime.
+- `resolvePluginGatewayIntents(...)` — `src/client/base.ts:458`: folds base intents contributed by plugins into the resolved gateway intents (why the effective `intents` can end up wider than your config).
 
 ## Code Examples (verified)
 
@@ -160,23 +161,8 @@ The `Cache` is constructed with the resolved intents and gates what it stores vi
 
 ## Source Anchors
 
-- `src/client/intents.ts:4,6` — `GatewayIntentInput` type, `resolveGatewayIntents` function.
-- `src/types/utils/index.ts:306-330` — `GatewayIntentBits` enum (incl. `NonPrivilaged = 53575421`, `OnlyPrivilaged = 33026`).
-- `src/common/types/util.ts:37` — `IntentStrings`.
-- `src/client/base.ts:1234` — config load resolves `intents` via `resolveGatewayIntents`.
-- `src/client/base.ts:1336-1384` — `StartOptions.connection.intents` (`GatewayIntentInput`), `RuntimeConfig`/`InternalRuntimeConfig`/`*HTTP` (HTTP omits `intents`).
-- `src/client/base.ts:458` — `resolvePluginGatewayIntents` (plugins contribute base intents).
-- `src/client/client.ts:145-193` — `start()` resolves `connection.intents ?? configIntents`, passes the number to `ShardManager`.
-- `src/cache/index.ts:157,225` — `Cache.intents` and `hasIntent(...)` gate caching by intent.
 - `src/index.ts` — `config.bot` / `config.http`; `export * from './types'` re-exports the enum.
 
 ## Agent Guidance
 
-- Set intents in `seyfert.config.mjs` inside `config.bot({ ... })`. They are resolved to a number at config-load time, so passing names, a number, or `number[]` all work identically downstream.
-- Import the enum from the root: `import { GatewayIntentBits } from 'seyfert'`. Watch the misspellings — it is `NonPrivilaged` / `OnlyPrivilaged` (no "e"); `NonPrivileged` will NOT compile.
-- For the full non-privileged set use `GatewayIntentBits.NonPrivilaged`; for absolutely everything use `NonPrivilaged | OnlyPrivilaged`. Do NOT assume `32767` means "all intents" (it omits bit 15 `MessageContent` and everything above it).
-- `resolveGatewayIntents` and the `GatewayIntentInput` type are internal helpers — not on the root barrel. App code rarely needs them, since `config.bot` (and `client.start`) call the resolver for you. Deep-import `seyfert/lib/client/intents` only if you genuinely need them.
 - Privileged intents (`GuildMembers`, `GuildPresences`, `MessageContent` = `OnlyPrivilaged`) require enabling toggles in the Discord Developer Portal (Bot > Privileged Gateway Intents) or the gateway connection is rejected. `MessageContent` is required to read `message.content` for prefix commands.
-- Runtime override: `client.start({ connection: { intents } })` takes the same `GatewayIntentInput` and wins over the config value. Useful for per-environment intent sets.
-- HTTP-only bots (`config.http`) do not use intents at all — there is no gateway connection (`RuntimeConfigHTTP` omits the field).
-- If cache entries are missing, check intents first: the cache only stores what your intents permit (`hasIntent`).

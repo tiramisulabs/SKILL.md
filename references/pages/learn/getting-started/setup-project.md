@@ -210,19 +210,10 @@ BOT_PUBLIC_KEY=...
 
 ## Source Anchors
 
-- src/index.ts (config.bot/http, createEvent, extendContext, barrel exports)
-- src/client/base.ts (RuntimeConfig/RuntimeConfigHTTP/RC/BotConfig/HttpConfig types, start, uploadCommands, getRC, _seyfertCfWorkerConfig, ServicesOptions)
-- src/client/client.ts (gateway Client: start, loadEvents, execute)
-- src/client/httpclient.ts (HttpClient.start → super.start + execute)
-- src/client/plugins/types.ts:32 (SeyfertRegistry), src/commands/applications/shared.ts (ParseClient, UsingClient, RegisteredClient)
 - package.json (name "seyfert", version 5.0.0, root export ./lib/index)
 
 ## Agent Guidance
 
-- Root imports come from `'seyfert'` (`Client`, `HttpClient`, `WorkerClient`, `config`, `ParseClient`, `extendContext`, `createEvent`, `LogLevels`). No deep imports needed for setup.
 - Always add the `SeyfertRegistry.client` augmentation in `declare module 'seyfert'` — without it, command/event handler `ctx.client` typing falls back to `BaseClient`. Add `middlewares` and `langs` keys in the same block when you have them.
-- v5 augmentation deltas: do NOT augment `UsingClient` / `RegisteredMiddlewares` / `DefaultLocale` directly (derived), and `ParseMiddlewares` was removed — use `typeof middlewares`.
 - `locations.base` must point at the directory that actually contains your command/event/component/lang folders: `dist` after a `tsc` build, `src` when running TS directly under bun/tsx.
-- `start()` loads handlers and (gateway) connects but never registers commands with Discord. Call `uploadCommands()` explicitly (commonly inside a `botReady` event) to publish them.
 - HTTP bots need an adapter: `@slipher/uws-adapter` or `@slipher/generic-adapter` are EXTERNAL packages (not in core Seyfert) — verify their versions in the target project. The core `HttpClient`/`config.http` API is verified here. Cloudflare Workers have a dedicated recipe; config is picked up via `_seyfertCfWorkerConfig`.
-- For tests or env-only deployments, pass `getRC` in the client options to skip the `seyfert.config` file entirely.

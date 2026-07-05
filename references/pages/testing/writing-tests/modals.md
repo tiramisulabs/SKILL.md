@@ -221,21 +221,8 @@ test('decoupled nickname modal runs the registered handler', async () => {
 
 ## Source Anchors
 
-- `src/builders/Modal.ts` (Modal + TextInput builders; toJSON validation `:100-124`)
-- `src/builders/Label.ts` (Label builder; component union `:9`; toJSON throw `:40`)
-- `src/structures/Interaction.ts:507-538` (`modal()` overloads, waitFor timer `:527`), `:866` (ModalSubmitInteraction), `:1024-1026` (getInputValue)
-- `src/commands/applications/chatcontext.ts:99-105` (context `modal()` wrapper; CANNOT_USE_MODAL throw `:102`)
-- `src/components/modalcommand.ts` (ModalCommand: customId/filter `:12-25`, hooks `:31-35`, readonly middlewares `:27`)
-- `src/components/modalcontext.ts:36` (ModalContext accessors `:72-140`, editResponse exists)
-- `src/common/types/write.ts:76-80` (`ModalCreateBodyRequest`, `ModalCreateOptions`)
-- `src/common/it/error.ts:101` (`CANNOT_USE_MODAL` message)
 - `src/index.ts` (root re-exports; Modal/Label/TextInput/TextInputStyle/ModalCommand all resolve from 'seyfert')
 
 ## Agent Guidance
 
 - For an awaited modal flow, ALWAYS use the two-arg `ctx.modal(modal, { waitFor })` overload — the one-arg `ctx.modal(modal)` only opens the modal and returns `undefined`; pair it with a registered `ModalCommand` to handle the submit.
-- Handle the `null` (timeout) result explicitly before calling `submit.write(...)` — the awaited overload returns `ModalSubmitInteraction | null`.
-- Read submitted fields with `ctx.getInputValue(customId)` (and `getChannels`/`getRoles`/`getCheckbox`/... for non-text inputs); in tests supply those values via `.fillModal(customId, { field: value })`, keyed by the INNER component customId.
-- Build modal inputs with `Label` + `setComponent(...)` (v5 form), not the legacy `ActionRow`. Label takes selects, checkboxes, radios, and file uploads too — not only `TextInput`.
-- Register decoupled `ModalCommand` classes in `createMockBot({ modals: [...] })` so `fillModal` can route to the real handler.
-- Because `@slipher/testing` is external, pin and verify its version in the consuming project; its chainable helper names may drift from this note.

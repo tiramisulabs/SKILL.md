@@ -322,11 +322,6 @@ through the captured reply / recorded action.
 
 ## Source Anchors
 
-- `src/commands/decorators.ts:195` — `Declare` command declaration decorator
-  (`LowercaseDeclareName<T>` enforces the lowercase command name).
-- `src/structures/User.ts:41` — `avatarURL(options?)` and snowflake-derived helpers.
-- `src/structures/extra/DiscordBase.ts:20,27` — `createdTimestamp` / `createdAt`
-  snowflake decode (`createdAt` returns a `Date`).
 - `src/structures/GuildMember.ts`, `src/structures/Webhook.ts` — additional `avatarURL` variants.
 
 ## Agent Guidance
@@ -334,11 +329,6 @@ through the captured reply / recorded action.
 - Use this page when writing or debugging mock-bot tests. Because `@slipher/testing`
   is external and pre-1.0, ALWAYS verify the exact signature/option names against the
   version in the target project's `package.json` before relying on them.
-- Prefer one fresh bot per test (`await using`); the boot is in-process and cheap.
-  Use `loadFromConfig: true` only for broad smoke specs.
-- Pick the dispatcher that matches the interaction: `slash` / `autocomplete` /
-  `userMenu` / `clickButton` / `selectMenu` / `fillModal` / `say` / `emit`. For modal
-  flows, chain `.fillModal(...)` on the pending dispatch instead of awaiting first.
 - Assert state the reply doesn't surface (bans, reactions, pins, voters, ...) through
   the read-only `bot.world` readers (`get`/`query`/`all`) rather than poking internals.
 - Root seyfert imports come from `'seyfert'`; the testing helpers and `TEST_*`

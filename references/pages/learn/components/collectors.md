@@ -258,21 +258,6 @@ client.collectors.create({
 
 v5 facts (src/client/collectors.ts): option type is `CollectorRunParameters<T>` (old `CollectorRunPameters` typo removed); `run`/`filter`/`onRunError` receive `(arg, stop)`-style args; `onStop(reason)` has NO `refresh`; `run('messageCreate', ...)` internally normalizes raw gateway names and now runs EVERY collector whose filter matches (the early `break` is gone — tighten filters if you relied on first-match). Exported root names: `Collectors`, `CollectorRunParameters`, `AllClientEvents`, `ParseClientEventName`.
 
-## Source Anchors
-
-- src/structures/Message.ts:76 (createComponentCollector entry, inherited by BaseMessage)
-- src/components/handler.ts:48-59 (CreateComponentCollectorResult), :82-172 (createComponentCollector + run/stop/waitFor/resetTimeouts), :174-207 (onComponent dispatch, filter/onPass/onError), :63-65 (values map + modal registry/expiry)
-- src/builders/types.ts:23-41,70-77 (ComponentCallback, ComponentCollectorStopReason, ListenerOptions, ModalSubmitCallback)
-- src/builders/Modal.ts:91-94 (Modal.run / __exec), :100-124 (toJSON validation)
-- src/structures/Interaction.ts:269 (modal __exec registration by user id), :507-538 (modal() reply + waitFor overload), :1024-1026 (getInputValue), :716-728 (StringSelectMenuInteraction.values typing)
-- src/client/collectors.ts (separate event-level Collectors class — contrast only)
-
 ## Agent Guidance
 
-- Use message component collectors for short-lived, in-process flows tied to one message (pagination, confirm/cancel, wizards). They do NOT survive restarts or cross shards/workers — for durable/multi-process flows use static `ComponentCommand`/`ModalCommand` with encoded custom-id state.
-- Always set `idle` and/or `timeout`, and strip components on stop so dead buttons don't linger.
-- Gate with `filter`; ack rejected users with `onPass`; catch handler throws with `onError`.
-- Prefer `i.update(...)` over `i.write(...)` for in-place flows; use `i.deferUpdate()` to ack silently.
-- `waitFor(customId, timeout?)` is the cleanest way to await a single (or, in a loop, sequential) interaction inline; resolves `null` on timeout or if the collector was cleared.
-- For modals: builder `.run(cb)` for a reusable handler, or `ctx.modal(modal, { waitFor })` for an inline await. Modals expire after 10 minutes; Discord emits no cancel event.
 - All root imports come from `'seyfert'` (Button, ActionRow, StringSelectMenu, StringSelectOption, Modal, TextInput, Label, Command, Declare, ButtonStyle, TextInputStyle, MessageFlags; types CommandContext / ModalSubmitInteraction / ButtonInteraction). No deep imports needed.

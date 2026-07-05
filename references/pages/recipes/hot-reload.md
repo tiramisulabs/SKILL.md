@@ -217,22 +217,5 @@ await watcher.spawnShards();
 
 ## Source Anchors
 
-- src/commands/handler.ts (reload:41, reloadAll:77)
-- src/components/handler.ts (reload:341, reloadAll:368)
-- src/events/handler.ts (reload:430, reloadAll:448)
-- src/langs/handler.ts (reload:77, reloadAll:99; onReload:95)
-- src/client/base.ts (handler instances: langs:182, commands:183, components:184, events:197)
-- src/client/client.ts (watcher parentPort integration:121-143)
-- src/common/bot/watcher.ts (WatcherOptions/WatcherPayload/WatcherSendToShard)
 - src/common/it/utils.ts (isCloudflareWorker:313); src/common/it/error.ts (RELOAD_NOT_SUPPORTED:102; SeyfertError.is:37-39)
 - src/index.ts (root re-exports; common is selectively re-exported, watcher types excluded)
-
-## Agent Guidance
-
-- Use the per-handler `reload`/`reloadAll` APIs for dev hot-reload; prefer `reloadAll(false)` in a developer command so one broken file does not abort reloading the rest.
-- Reload relies on `__filePath` being set during load — items registered programmatically without a file path return `null` from `reload` and are skipped by `reloadAll`.
-- Never expose a reload command publicly; gate it (owner-only middleware / guild check). Reload mutates the live handler registries.
-- Do NOT call reload in Cloudflare Worker / HTTP-on-edge deployments — it throws `RELOAD_NOT_SUPPORTED`. Catch and narrow with `SeyfertError.is(error, 'RELOAD_NOT_SUPPORTED')`.
-- `components.reload` takes a path, the others take a name/locale — easy to get wrong.
-- v5 middleware has no `pass()`; use `stop('reason')` to deny and `next()` to continue. The owner-gate example above reflects this.
-- `@slipher/watcher` is external: confirm its installed version and that its `Watcher` constructor still matches the `WatcherOptions` shape (`filePath`, `srcPath`, `transpileCommand`) in the target project. The watcher runs the bot in a worker thread (`__USING_WATCHER__`) and proxies gateway payloads, so the gateway stays connected across restarts.

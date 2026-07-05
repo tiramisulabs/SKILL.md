@@ -204,18 +204,8 @@ export function renderChartFile(config: ChartConfiguration, name = 'chart.png'):
 
 ## Source Anchors
 
-- `src/builders/Attachment.ts` — `AttachmentBuilder` (`setName`/`setFile`/`setDescription`/`setSpoiler`), `AttachmentResolvableMap` (`:9`), `resolveAttachmentData` buffer handling (`:236`).
-- `src/builders/index.ts` — `export * from './Attachment'`.
-- `src/builders/Embed.ts` — `setImage(url?)` (`:106`) for `attachment://` embedding.
-- `src/common/types/write.ts:25` — `files?: AttachmentBuilder[] | Attachment[] | RawFile[]` on the write/edit body.
-- `src/index.ts` — `export * from './builders'` (confirms root `seyfert` import path).
 - Real runtime plugins live under `src/client/plugins/*` (createPlugin) — `@slipher/chartjs` is intentionally NOT one of them.
 
 ## Agent Guidance
 
 - Use when a bot needs to send generated charts/graphs as image attachments without spinning up a browser (server-side canvas rendering).
-- Always send via `files: [new AttachmentBuilder().setName('x.png').setFile('buffer', buffer)]`. The `'buffer'` resolvable type accepts a Node `Buffer` (and typed arrays / `ReadableStream`), so the Chart.js PNG buffer drops straight in.
-- To put the chart inside an embed, attach the file AND `embed.setImage('attachment://x.png')` with a matching filename, in the same `files` array.
-- Reuse a single module-scope `NapiChartjsCanvas`; defer the interaction before heavy renders.
-- Remember v5: `write`/`editOrReply` return `void` unless you pass the response flag; option keys must be lowercase; `choices` arrays want `as const`.
-- This is an external package — `renderToBuffer`/`renderChart`/`plugins` shapes and the native `@napi-rs/canvas` binary requirement must be verified in the target project.

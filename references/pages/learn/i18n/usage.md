@@ -217,21 +217,5 @@ await client.langs.reloadAll();
 
 ## Source Anchors
 
-- `src/langs/router.ts` — `LangRouter` proxy, `__InternalParseLocale`, `SeyfertLocale` (`:60`), `ParseLocales` (`:62`)
-- `src/langs/handler.ts` — `LangsHandler` (getKey, getLocale, get, aliases, defaultLang, preferGuildLocale, reload/reloadAll, onFile default/named-export handling)
 - `src/langs/index.ts` — barrel (re-exported via `src/index.ts`)
-- `src/commands/decorators.ts` — `Locales` (`:47`), `LocalesT` (`:61`), `TranslatedGroupDefinition` (`:68`), `LocalizedGroupDefinition` (`:75`), `defineGroups` (`:85`), `GroupsT` (`:91`), `Groups` (`:107`), `Group` overload (`:151`)
-- `src/commands/applications/options.ts` — option `locales` (`:31`,`:49`), choice `locales` (`:60`)
-- `src/commands/applications/shared.ts` — `DefaultLocale`
 - `src/commands/handler.ts:457-562` — `getLocales`, `getLocaleKey`, `parseGlobalLocales`, `parseCommandOptionLocales`, `parseCommandLocales` (choice locale resolution ~`:517`)
-- `src/commands/applications/chatcontext.ts:72` — `ctx.t` getter (mirrored in menu/entry/component/modal contexts)
-- `src/client/base.ts:1184` — `client.t(locale)`; `:354-359` setServices langs wiring; `:1394` `ServicesOptions.langs`
-
-## Agent Guidance
-
-- All decorators/factories/types here import from the `'seyfert'` root — no deep imports.
-- Prefer the dot-path decorators (`@LocalesT`/`@GroupsT` + option/choice `locales`) when localizations live in lang files; use `@Locales`/`@Groups` only for inline one-off tuples.
-- Register `SeyfertRegistry.langs` with `ParseLocales<typeof oneLocaleFile>` BEFORE expecting typed dot-paths or typed `ctx.t`.
-- Configure runtime behavior with `client.setServices({ langs: { default, preferGuildLocale, aliases } })`, not the constructor.
-- Runtime read pattern: string/array/nested → `ctx.t.path.get()`; function → `ctx.t.path(args).get()`; force locale → `.get('xx-YY')`.
-- Missing-key behavior is forgiving: metadata localization silently skips (logs a warning); runtime `.get()` falls back to `defaultLang`. Neither throws under normal flow.

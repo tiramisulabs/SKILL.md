@@ -217,18 +217,8 @@ const client = new Client({ plugins: definePlugins(economy) });
 - Clarify (not in page): `start()` does not upload commands; `uploadCommands()` is the separate step (`base.ts:1056`).
 
 ## Source Anchors
-- `package.json` (name/version)
-- `src/index.ts` (root exports, `config` :76, `createEvent` :68, `extendContext` :119)
-- `src/client/base.ts` (`setServices` :309, `start` :374, `INVALID_TOKEN` :382, `uploadCommands` :1056, ctor `plugins` :1243 / `logger` :1300 / `langs` :1394, `preferGuildLocale` :358/:1396)
-- `src/client/httpclient.ts` (`HttpClient`, `start` :10), `src/client/workerclient.ts`, `src/client/client.ts`
-- `src/client/plugins.ts` (`createPlugin` :240, `definePlugins` :283)
-- `src/commands/applications/shared.ts` (`UsingClient` :43 alias, `ParseClient` :48, `RegisteredClient` :30, `DefaultLocale` :26)
-- `src/client/plugins/types.ts:32` (`SeyfertRegistry`)
 - `src/commands/decorators.ts` (`Declare` :195, `Options` :161), `src/commands/applications/chat.ts:361` (`Command`)
 
 ## Agent Guidance
 - Use this page only for project bootstrap: install, set `engines`/TS target, create `seyfert.config.*`, scaffold `commands`/`events`/`components`/`langs` folders, and add the `SeyfertRegistry` augmentation so `CommandContext`/`client.t`/middleware metadata are typed.
 - Default first-bot shape: `Client` + `config.bot` + a `ready`-style event + one `@Declare`d command + `start().then(uploadCommands)` + `SeyfertRegistry.client` augmentation. Reach for `HttpClient`/`config.http` for serverless interaction bots, `WorkerClient`/`WorkerManager` for sharding.
-- Gotcha: forgetting the `SeyfertRegistry.client` augmentation degrades client typing to base `BaseClient`. Do not resurrect `interface UsingClient extends ...` — it silently won't merge.
-- Gotcha: `start()` succeeding does NOT mean slash commands are live; call `uploadCommands()` (typically once / on deploy).
-- Always import public API from `'seyfert'`; reach into `'seyfert/lib/...'` only for types/utilities not re-exported by the root barrel.

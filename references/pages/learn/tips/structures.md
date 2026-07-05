@@ -245,29 +245,15 @@ if (missing.length) {
 
 ## Source Anchors
 
-- `src/client/transformers.ts` (`Transformers`, `InferCustomStructure`, `*Structure` aliases)
-- `src/structures/GuildMember.ts` (member methods, `roles` getter, `voice`, `fetchPermissions`,
-  `manageable`/`bannable`/`kickable`/`moderatable`)
 - `src/structures/extra/Permissions.ts` + `src/structures/extra/BitField.ts`
   (`has`/`strictHas`/`missings`/`keys`/`resolve`)
-- `src/structures/channels.ts` (channel type guards + `is([...])`)
-- `src/structures/VoiceState.ts` (`isMuted`/`isDeafened`/`isCameraOn`/`isStreaming`/`isSuppressed`)
 - `src/structures/Message.ts`, `src/structures/User.ts`
-- `src/common/shorters/users.ts` (`raw`, `createDM`, `fetch`, `write`)
-- `src/commands/applications/shared.ts` (`CustomStructures` interface)
 
 ## Agent Guidance
 
 - Reach for structure methods/getters over raw payload poking; they delegate to the right shorter.
-- `roles.keys` includes `@everyone` (the guild id) — filter it out if you only want assigned roles.
-- For permission gating prefer `strictHas` when an admin must NOT be auto-granted the check; use
-  `has` when an admin override is desired.
-- Before banning/kicking/timing out, gate with `bannable()`/`kickable()`/`moderatable()` — they
-  account for role hierarchy and ownership so you don't fire a doomed REST call.
-- `timeout(...)` is milliseconds now; multiply seconds by 1_000.
 - To customize a structure you MUST do both: reassign `Transformers.<Name>` AND augment
   `CustomStructures` in `declare module "seyfert"` — types and runtime are decoupled.
 - Prefer EXTENDING the built-in class (subclass + `Transformers.X = (...a) => new Sub(...a)`) when you
   only want to ADD behavior; a plain object literal transformer REPLACES the shape and drops every
   native method unless you re-add/delegate (keep a `raw()` to the API object when you still need it).
-- All names here import from `'seyfert'` root; no deep `'seyfert/lib/...'` import is required.

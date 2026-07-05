@@ -10,6 +10,68 @@ Verification status: Source-verified (the authoritative Seyfert source)
 
 Seyfert lets a command override per-lifecycle error/hook methods so failures are handled in a structured way and reported back to the user. The error hooks cover thrown `run` errors, option `value()` validation failures, middleware stops, and missing member/bot permissions; lifecycle hooks add before/after control points. Any hook can also be set globally via `client.options.commands.defaults` (and lighter `components.defaults` / `modals.defaults`), with per-command definitions taking precedence (applied via `??=`). Component (`ComponentCommand`) and modal (`ModalCommand`) handlers expose the same family of hooks (minus options/permissions). SOURCE NOTES vs the docs MDX: `onMiddlewaresError` now takes a 3rd `metadata` arg, `onInternalError` takes the offending `command`/`component`/`modal` as its 2nd arg (error is last), and middleware no longer has `pass` — use `stop()`.
 
+## Decision: try/catch vs `onRunError` (read this first)
+
+Seyfert already wraps every command/component/modal `run()` in a try/catch for you (`src/commands/handle.ts:131-140` for commands, `src/components/handler.ts:413-424` for components & modals). A thrown error is routed to `onRunError(ctx, error)` → then `onAfterRun(ctx, error)`; `onInternalError` is only the net for when one of *your own hooks* throws. So in the normal case **you do not need a local `try/catch` to catch-and-report** — let the error propagate and handle it in a hook.
+
+Both the per-handler hook and the client default are **optional-chained** (`command.onRunError?.(...)`; the default is copied onto the handler from `*.defaults` via `??=`). If you set NEITHER, a thrown error is **swallowed silently — no reply, no log**. That silent swallow is exactly why a too-literal (1:1) port ends up with a `try/catch` in every handler: the `try/catch` is compensating for a missing default.
+
+### The rule
+
+1. **Set a default `onRunError` on all three surfaces** — `commands.defaults`, `components.defaults`, AND `modals.defaults`. They are independent: setting only `commands.defaults` leaves every component and modal with no fallback (the #1 reason people reach for `try/catch`). One default per surface = every handler reports its errors with zero local `try/catch`.
+2. **A handler-specific error message is the signal to use a per-handler `onRunError`** — not a `try/catch`, and not the generic default. If a `catch` shows copy tailored to *this* command/component/modal, define `onRunError(ctx, error)` on the class and put the message there. The default still covers every other handler (`??=` means the class method wins). Deleting a bespoke message into the generic default is a regression — you lose the specific copy.
+3. **Reserve `try/catch` for genuine local control flow**, never for error reporting:
+   - Tolerate a single call — prefer `await something().catch(() => null)` over a `try` block.
+   - Recover / retry / render the error as output / clean up and *keep executing* — a real branch that needs run-local state (timing, partial results, the input) a hook can't see.
+   - Code with **no hook**: events (`createEvent`), managers/services, bootstrap. There is no `onRunError` there, so `try/catch` is the right tool.
+
+### Porting an existing `try/catch`? Triage by what the `catch` does
+
+Don't reflexively delete every `try/catch` into the default — first read what the `catch` block actually does:
+
+| The `catch` block… | Do this |
+|---|---|
+| shows a message **specific to this handler** | **move that message into a per-handler `onRunError`** — keep the copy, drop the `try/catch` |
+| shows a **generic** message the default already gives, or just `return`s / swallows | **delete it** — let the error reach the default `onRunError` |
+| **recovers, retries, renders the error as output, or cleans up** (needs run-local state) | **keep** the `try/catch` — legit local control flow, not reporting |
+
+```ts
+// ❌ before: generic catch that only duplicates the default
+async run(ctx: CommandContext) {
+  try {
+    await risky();
+    await ctx.editOrReply({ content: 'done' });
+  } catch {
+    await ctx.editOrReply({ content: 'Something failed' }); // the default already says this
+  }
+}
+// ✅ after: delete it — the client default reports every command's errors
+async run(ctx: CommandContext) {
+  await risky();
+  await ctx.editOrReply({ content: 'done' });
+}
+
+// ❌ before: catch with a message specific to THIS handler
+async run(ctx: CommandContext) {
+  try {
+    await reloadEverything();
+    await ctx.editOrReply({ content: 'Reloaded.' });
+  } catch {
+    await ctx.editOrReply({ content: 'The reload failed — check the logs.' }); // bespoke copy
+  }
+}
+// ✅ after: keep the bespoke copy, but as a per-handler hook (the default still covers the rest)
+async run(ctx: CommandContext) {
+  await reloadEverything();
+  await ctx.editOrReply({ content: 'Reloaded.' });
+}
+async onRunError(ctx: CommandContext, _error: unknown) {
+  await ctx.editOrReply({ content: 'The reload failed — check the logs.' });
+}
+```
+
+The client-wide defaults for all three surfaces are shown under [Client-wide defaults](#code-examples-verified) below.
+
 ## Key APIs (verified)
 
 All chat hooks are optional methods on `BaseCommand` (extended by `Command` / `SubCommand`); `ContextMenuCommand` supports the subset noted. Signatures from `src/commands/applications/chat.ts:349-358`:
@@ -303,26 +365,7 @@ export default class Ping extends Command {
 - `onBeforeOptions`, `onOptionsError`, `onPermissionsFail` are chat `Command`-only; `ContextMenuCommand` (stablishContextCommandDefaults, handler.ts:576-590), `components`, and `modals` defaults do not accept them.
 - `PluginMiddlewareDenialMetadata` is re-exported at the root `seyfert` (`src/client/plugins.ts`), so `import type { PluginMiddlewareDenialMetadata } from 'seyfert'` if you need the type annotation (runtime hooks work without importing it).
 
-## Source Anchors
-
-- `src/commands/applications/chat.ts` (BaseCommand hook signatures 349-358)
-- `src/commands/handle.ts` (chat execution flow + hook firing order 105-251, 425, 448-485, 678-755)
-- `src/commands/handler.ts` (`stablishCommandDefaults` 592-607, `stablishContextCommandDefaults` 576-590, `stablishSubCommandDefaults` 609-659)
-- `src/client/base.ts` (`BaseClientOptions` defaults 1256-1298)
-- `src/components/handler.ts` (component/modal execution + defaults 257-261, 380-426)
-- `src/components/componentcommand.ts` (ComponentCommand hooks 20-49)
-- `src/components/modalcommand.ts` (ModalCommand hooks 14-35)
-- `src/commands/applications/shared.ts` (`MiddlewareContext`/`StopFunction`/`NextFunction`/`OKFunction` 19-60, `OnOptionsReturnObject`)
-- `src/commands/applications/options.ts` (`createMiddleware` 213, option `value` callback)
-- `src/client/plugins/types.ts` (`PluginMiddlewareDenialMetadata` 64)
-- `src/common/it/error.ts` (`SeyfertError.is` 37-39, `SeyfertErrorCode`/`CANNOT_USE_MODAL` 101, 142)
-
 ## Agent Guidance
 
-- Use per-command hooks for command-specific UX; use `commands.defaults` for a global fallback (applied with `??=`, so a method defined on the class always wins). Set `components.defaults` / `modals.defaults` for component & modal handlers — but only the 5 supported keys (`onBeforeMiddlewares`, `onRunError`, `onInternalError`, `onMiddlewaresError`, `onAfterRun`).
-- Which hook fires: thrown error in `run` -> `onRunError`; option `value()` calling `fail()` -> `onOptionsError`; a middleware calling `stop('reason')` -> `onMiddlewaresError` (a bare `stop()` skips silently with NO hook); missing member perms (`defaultMemberPermissions`) -> `onPermissionsFail`; missing bot perms (`botPermissions`) -> `onBotPermissionsFail`; one of YOUR hooks throwing -> `onInternalError`.
-- `onAfterRun` always runs (cleanup/metrics) — check its `error` arg to branch success vs failure. `onInternalError` is the last-resort net for handler bugs; keep it simple so it cannot throw (component path logs via `client.logger.error` if it does).
-- Gotcha: copying the docs' `onInternalError: (client, error) =>` is a real bug now — the 2nd arg is the command/component/modal, not the error. Always treat the LAST arg as the error.
-- Gotcha: any middleware still written with `pass` will fail to type-check / run on this branch; migrate to `stop()`.
 - Gotcha: `editOrReply`/`write` return `void` unless you pass the response flag (`true`); don't `await` them expecting a `Message` inside an error handler unless you opt in.
 - `SubCommand` hooks are auto-bound and fall back to the parent command's hook then the client default (`stablishSubCommandDefaults`), so you usually only define hooks on the parent unless a subcommand needs special handling.

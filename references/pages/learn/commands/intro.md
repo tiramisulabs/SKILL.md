@@ -248,19 +248,10 @@ export default class CreateTag extends SubCommand {
 
 ## Source Anchors
 
-- `src/commands/index.ts` (barrel re-exports)
-- `src/commands/decorators.ts` (Declare, Options, Group/Groups/GroupsT, Middlewares, AutoLoad, Locales/LocalesT, defineGroups, defaults)
-- `src/commands/applications/chat.ts` (Command, SubCommand, BaseCommand, lifecycle hooks, toJSON, reload)
-- `src/commands/applications/shared.ts` (IgnoreCommand enum, ExtraProps, middleware StopFunction)
-- `src/commands/applications/chatcontext.ts` (CommandContext, GuildCommandContext, `inGuild()`/`isChat()` narrowing, write/editOrReply/modal/channel/fetchMember)
-- `src/commands/applications/options.ts` (option helper functions)
 - `src/structures/extra/Permissions.ts` (PermissionsBitField.resolve)
 
 ## Agent Guidance
 
 - Use this page when scaffolding or reviewing top-level commands and their `@Declare` metadata. For option helpers, subcommands, groups, and middleware, follow the dedicated pages.
-- Always `export default` the top-level command class. Subcommand classes referenced in `@Options([...])` can be named exports.
 - For `@AutoLoad()`, use a dedicated parent folder and default-export every leaf `SubCommand`; use explicit `@Options([...])` when you want named exports or same-file examples.
-- Chat-input commands REQUIRE `name` (lowercase) and `description`. Context-menu (User/Message) commands must NOT pass `description`. Entry-point commands require `handler` and cannot use `ignore`/`aliases`/`guildId`.
-- Pass permissions as readable string arrays (e.g. `['Administrator']`); they resolve to bigints internally and throw on unknown strings — don't read back the original array.
 - v5 essentials to enforce in generated code: option keys lowercase; `write`/`editOrReply` return `void` unless the response flag is `true`; middleware control flow uses `stop()` (no `pass()`); `onInternalError(client, command, error?)` has `command` before `error`; `ctx.inGuild()` narrows to `GuildCommandContext`. Channel structures also gained `isGuild()`/`isNamed()` guards for narrowing `await ctx.channel()` results.

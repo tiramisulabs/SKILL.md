@@ -45,7 +45,7 @@ All from `src/client/plugins.ts` and re-exported via `src/client/index.ts` (`exp
   - `plugins:ready` `[client]`, `plugins:setupComplete` `[client]`
   - `commands:beforeLoad` `[client, dir?]`, `commands:afterLoad` `[metadata]` (PluginLoadedMetadata<'commands'>)
   - `components:beforeLoad` `[client, dir?]`, `components:afterLoad` `[metadata]`
-  - `events:beforeLoad` `[client, dir?]`, `events:afterLoad` `[client, dir?]` (BOTH are `[client, dir]`, unlike commands/components afterLoad)
+  - `events:beforeLoad` `[client, dir?]`, `events:afterLoad` `[client, dir?]`
   - `client:close` `[client]`
 - Registration types: `SeyfertRegistry` (augment with `plugins: typeof plugins`), `RegisteredPlugins`, `PluginUsingClient`, `RegisteredPluginShared` (augment for typed shared names).
 
@@ -314,34 +314,16 @@ export const auditPlugin = createPlugin({
   and a full `SeyfertPluginApi` (events, hooks, gateway, cache, shared, langs, handlers, rest,
   autocomplete, diagnostics, options, reload). Not wrong — incomplete.
 - Docs omit `createPluginFactory` and `createSharedKey` — both are real root exports.
-- `teardown`'s `api` is the narrower `SeyfertPluginTeardownApi` (only `has`, `diagnostics`, `shared.has`);
-  docs say "both receive the plugin api as an optional second argument" without noting the teardown api is
-  restricted and mutation throws. Source wins.
-- `events:afterLoad` payload is `[client, dir]`, while `commands:afterLoad` / `components:afterLoad` are
-  `[metadata]` — easy to conflate; verified at types.ts:204-208.
 - `package.json` `peerDependencies.seyfert: ">=5.0.0-0"` is doc-authored; pin to the actual v5 range your
   target project uses (a published version cannot be verified from source).
 
 ## Source Anchors
 
-- src/client/plugins.ts (createPlugin:240-265, definePlugins:283-289, createPluginFactory:267-281,
-  resolveClientPlugins, setup/teardown lifecycle:656-783, hook/observer runners)
-- src/client/plugins/types.ts (SeyfertPlugin:492, SeyfertPluginApi:373, SeyfertRegistry:32,
-  SeyfertPluginHooks:200, PluginOrder:69, requirement/shared types:36-93, SeyfertPluginTeardownApi:479)
-- src/client/plugins/api.ts (createPluginApi — full register-time surface, teardown guard:98-107, reserved cache names:40-79)
-- src/client/plugins/shared.ts (createSharedKey:22-32, addPluginShared/override+dispose)
-- src/client/plugins/order.ts (ordering bands:20-38)
 - src/client/index.ts (`export * from './plugins'`), src/index.ts (`export * from './client'`)
 
 ## Agent Guidance
 
-- Use `createPlugin` for the plugin object and ALWAYS install via `definePlugins(...)` + augment
-  `SeyfertRegistry.plugins` so `client.*` / `ctx.*` helpers and middleware names are typed in app code.
-- Keep `client`/`ctx` factories synchronous; put async startup in `setup`, cleanup in `teardown`. Don't add
-  typed client keys by assigning inside `setup` — declare them in `client`.
-- For stateful plugins, create the instance once and pass it in.
 - To share a runtime object with OTHER plugins (not on `client.*`), use `api.shared.set` + `createSharedKey`,
   and declare `requires: [{ capability: key }]` for consumers (see services-and-requirements page).
-- Anything not in the `definePlugins` tuple won't expose global types to app code even if it runs.
 - Third-party packages: keep `seyfert` as a peerDependency, export factories from package root, and use root
   `seyfert` imports in public examples (avoid `seyfert/lib/...`).

@@ -273,23 +273,8 @@ export default class ConfirmButton extends ComponentCommand {
 
 ## Source Anchors
 
-- `src/commands/applications/options.ts` (`createMiddleware`, `AnyContext`)
-- `src/commands/applications/shared.ts` (`MiddlewareContext`, `NextFunction`, `StopFunction`, `ParseGlobalMiddlewares`, `GlobalMetadata`, `MetadataMiddleware`, `CommandMetadata`)
-- `src/commands/applications/chat.ts` (`BaseCommand.__runMiddlewares`, `__runGlobalMiddlewares`, next/stop/deny semantics, missing/throwing handling)
-- `src/commands/decorators.ts` (`@Middlewares`, lowercase `middlewares`, `InferMiddlewares`, `RegisteredMiddlewares`, `ResolvedRegisteredMiddlewares`)
-- `src/commands/handle.ts` (`runGlobalMiddlewares`, `runMiddlewares`, run order, deny -> `onMiddlewaresError` + plugin observers)
-- `src/commands/handler.ts` (`onMiddlewaresError` defaults wiring)
-- `src/commands/applications/chatcontext.ts` (`CommandContext`, `metadata`, `globalMetadata`)
 - `src/components/componentcommand.ts`, `src/commands/applications/menu.ts`, `src/components/modalcommand.ts` (`middlewares` field on component/menu/modal commands)
-- `src/client/base.ts:1255` (`globalMiddlewares` client option)
-- `src/client/plugins/types.ts:64` (`PluginMiddlewareDenialMetadata`)
 
 ## Agent Guidance
 
 - All root imports (`createMiddleware`, `Middlewares`, `middlewares`, `InferMiddlewares`, `Command`, `CommandContext`, `ComponentContext`, `ChannelType`, `Client`, `ParseClient`, `ParseGlobalMiddlewares`, `PluginMiddlewareDenialMetadata`) come from `'seyfert'` — no deep imports.
-- Always call exactly one of `next` or `stop`. Repeated calls after the first are ignored.
-- Use `stop("reason")` for user-facing denials and implement `onMiddlewaresError(ctx, error, metadata)` to actually respond; `metadata = { middleware, scope }`. Use bare `stop()` to silently drop the interaction (replaces v4 `pass()`).
-- Reach for `createMiddleware<T>` whenever you pass data; the `next(data)` payload becomes required and surfaces on `ctx.metadata.<name>` (command) or `ctx.globalMetadata.<name>` (global). Type the command `run` with `CommandContext<OptionsType, "mwA" | "mwB">`, or with `InferMiddlewares<typeof sharedList>` when sharing a `middlewares(...)` tuple.
-- Narrow the context generic (`createMiddleware<void, CommandContext>` or `<void, ComponentContext>`) when the middleware touches context-specific fields, since `AnyContext` is a broad union.
-- Order: globals first (in `globalMiddlewares` order), then per-command (`@Middlewares` order), then `run`. Globals do NOT run for component/modal handlers — only their own `middlewares` do.
-- Don't rely on `pass()` or `ParseMiddlewares` from older tutorials — both were removed in v5. Use `stop()` and bare `typeof middlewares`.

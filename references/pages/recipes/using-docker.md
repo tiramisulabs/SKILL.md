@@ -268,27 +268,11 @@ compose file and is read by Compose, NOT baked into the image).
 - Otherwise the Dockerfile and required-files list are accurate; the bot loads from
   the `dist` output via `getRC().locations`.
 
-## Source Anchors
-
-- `src/client/base.ts:1127-1168` — `loadCommands`/`loadComponents`/`loadLangs` default
-  their dir from `getRC().locations.*`
-- `src/client/base.ts:1188-1239` — `getRC()` reads `seyfert.config` from cwd (across
-  6 extensions), error codes, resolves+joins locations, caches in `_rcCache`
-- `src/client/base.ts:1349-1365` — `RCLocations` / `RC` shape (`base` required)
-- `src/client/base.ts:1375-1378` — `InternalRuntimeConfigHTTP` requires
-  `publicKey`/`port`/`applicationId`, omits `events` location
-- `src/index.ts:76-103` — `config.bot` / `config.http` helpers (http `port` default
-  `8080`; Cloudflare static-config stash)
-
 ## Agent Guidance
 
 - This is an ops recipe; treat the Dockerfile as project-owned. The only things to
   verify against Seyfert: the config file is copied in, `WORKDIR`/`ENTRYPOINT` run
   from the app root, and `locations.base` matches the directory you actually ship
   (`dist`).
-- For HTTP interactions bots, switch the config helper to `config.http`, supply
-  `publicKey`/`applicationId`, and `EXPOSE`/publish the port (default `8080`).
-- Recommend a `.dockerignore` (drop `node_modules`, `dist`, `.env`) and runtime secret
-  injection (env/compose/secrets) — never `ENV`-baked tokens.
 - When debugging "no commands registered" in a container, check `locations.base` and
   that `dist/commands` (etc.) actually exists in the image.

@@ -238,20 +238,6 @@ callbacks with `Object.assign` into one merged context function
   in `src/commands/handle.ts` (interaction sites lines 261, 269, 318, 337, 746; message/prefix
   site line 420), so returning `undefined`/nothing is safe (falls back to `{}`).
 
-## Source Anchors
-
-- `src/index.ts` (extendContext helper, line 119; identity `return cb`)
-- `src/client/base.ts` (BaseClientOptions.context type, lines 1245-1254)
-- `src/commands/applications/shared.ts` (ExtendContext interface, line 27; UsingClient is a
-  derived type alias at line 43 — not interface-mergeable)
-- `src/client/plugins/types.ts` (RegisteredPluginContext line 290; PluginContextMap line 250)
-- `src/client/plugins.ts` (createPlugin line 240; `ctx`/`client` plugin keys lines 176-177,
-  219-220; context-callback composition lines 832-843)
-- `src/commands/applications/chatcontext.ts`, `menucontext.ts`, `entrycontext.ts`
-- `src/components/componentcontext.ts`, `modalcontext.ts`, `interactioncontext.ts`
-- `src/commands/handle.ts` (Object.assign merge sites 261, 269, 318, 337, 420, 746)
-- `src/commands/basecontext.ts` (BaseContext — base of all contexts, `is*` guards)
-
 ## Common patterns / gotchas
 
 - TWO steps for typed custom props via the client hook: (1) the runtime `context` option, and
@@ -278,14 +264,3 @@ callbacks with `Object.assign` into one merged context function
 - v5 reminder: do NOT augment `UsingClient` or `RegisteredMiddlewares` — both are derived from
   `SeyfertRegistry` now. Register the client via `SeyfertRegistry.client` and middlewares via
   `SeyfertRegistry.middlewares` (`typeof middlewares`; `ParseMiddlewares` was removed).
-
-## Agent Guidance
-
-- Use `context`/`extendContext` for small, synchronous, per-context computed helpers derived
-  from the interaction (parsed locale flag, owner check, trace id, quick cache lookup). For
-  app-wide services/clients prefer plugins, which feed `RegisteredPluginContext` →
-  `ExtendContext` automatically.
-- When writing a reusable library/feature, expose context props through `createPlugin({ ctx })`
-  rather than asking consumers to wire a `context` callback and augment `ExtendContext` by hand.
-- `extendContext` is purely a typing convenience (identity function); inline
-  `context(interaction){...}` is equivalent.

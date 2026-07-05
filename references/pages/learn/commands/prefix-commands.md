@@ -247,22 +247,6 @@ client.setServices({ handleCommand: PositionalHandleCommand });
 - v5: `setServices({ handleCommand })` takes the `HandleCommand` CONSTRUCTOR, not an instance (`base.ts:1400-1405`). v4 passed `new HandleCommand(client)`.
 - Docs don't mention it: prefix dispatch also enforces `command.contexts` / `command.guildId` and runs member/bot permission checks before running (`handle.ts:384-386,442-459`); the guild owner bypasses the member-permission check.
 
-## Source Anchors
-
-- `src/commands/handle.ts` — `HandleCommand`, `message()` (entry, `:364`), `argsParser` (`:492`), `resolveCommandFromContent` (`:500`), `resolveCommandFromNameParts` (`:547`), `argsOptionsParser`/boolean parse (`:788`), prefix sort+match (`:368-369`), `IgnoreCommand.Message` filtering (`:606`), permission gates (`:442-459`).
-- `src/client/client.ts:316-320` — `commands.prefix` / `deferReplyResponse` / `reply` option types.
-- `src/commands/applications/shared.ts:23,52,133` — `InternalOptions`, `InferWithPrefix`, `IgnoreCommand` enum.
-- `src/commands/applications/chatcontext.ts` — `message`/`interaction` typing (`:49-52`), `t` (`:72-78`), `write` (`:88`), `modal` (`:99-105`), `deferReply` (`:107`), `editResponse` (`:126`), `editOrReply` (`:145`), `author/guildId/channelId/member` (`:236-254`), `inGuild` (`:260`).
-- `src/commands/applications/chat.ts:142,365` — `aliases`, `groupsAliases`.
-- `src/commands/index.ts:11` — barrel export (type-only) confirming `HandleCommand` class is not root-exported.
-- `src/client/base.ts:309,1400-1405` — `setServices({ handleCommand })` (constructor), default `HandleCommand`.
-- `src/common/it/error.ts:101` — `CANNOT_USE_MODAL` message.
-
 ## Agent Guidance
 
-- Prefix commands reuse the exact same `Command`/`SubCommand`/`@Options` classes as slash commands; you do not write separate handlers. Write one `run(ctx)`; branch on `ctx.interaction` / `ctx.message` only for transport-specific bits (modals, `message.crosspost()`, etc.).
-- Always add the `withPrefix: true` augmentation or `ctx.message` is `undefined`-typed.
-- Guard message-only logic with `if (ctx.message)` and modal/interaction-only logic with `if (ctx.interaction)`.
 - Prefer `ctx.author`, `ctx.guildId`, `ctx.channelId`, `ctx.member`, `ctx.write/editOrReply/deferReply/followup` over reaching into `ctx.message`/`ctx.interaction` — they already abstract both transports.
-- The default option parser is `-flag value` greedy-to-next-`-`. For positional/quoted/natural parsing, subclass `HandleCommand` (deep import) and register with `client.setServices({ handleCommand: MyClass })` (the class). Many bots use `yunaforseyfert` (external — verify version in target project) for richer parsing.
-- Don't rely on per-user locale in prefix commands; `ctx.t` uses `defaultLang`.

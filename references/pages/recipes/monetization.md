@@ -231,22 +231,6 @@ await client.applications.deleteTestEntitlement(test.id);
 - `consume()` only makes sense for consumable SKUs (`SKUType.Consumable`); calling it on a subscription entitlement is meaningless. Deliver the item in your own store first, then consume, so a failed delivery doesn't lose the purchase.
 - `EntitlementType.ApplicationSubscription` (8) is the value for app-subscription purchases; `PremiumSubscription` (2) is Discord Nitro, not your SKU. Gate on `skuId` rather than `type` when you can.
 
-## Source Anchors
-
-- `src/structures/Entitlement.ts` (consume, startsAtTimestamp/endsAtTimestamp)
-- `src/client/transformers.ts` (EntitlementStructure, Transformers.Entitlement)
-- `src/events/hooks/entitlement.ts` (ENTITLEMENT_CREATE/UPDATE/DELETE)
-- `src/structures/Interaction.ts:110,135,441,668` (entitlements field)
-- `src/builders/Button.ts:78` (setSKUId / setStyle)
-- `src/types/payloads/monetization.ts` (APIEntitlement, EntitlementType, SKU/Subscription types)
-- `src/types/payloads/components.ts:167,188` (ButtonStyle.Premium; premium button omits custom_id/emoji/label)
-- `src/common/shorters/application.ts:92-132` (entitlement/SKU shorters)
-
 ## Agent Guidance
 
-- Use `entitlement.userId` / `entitlement.guildId` to know who/what is entitled; gate premium features by checking `ctx.interaction.entitlements` and filtering by `skuId` (and `endsAtTimestamp`/`deleted`) rather than only `.length`.
-- For consumable purchases, deliver the item, then call `entitlement.consume()` (or `client.applications.consumeEntitlement(id)`).
-- During development, use `createTestEntitlement` / `deleteTestEntitlement` to simulate purchases without real payments.
-- `entitlementDelete` is NOT expiry — it fires only on refund/manual deletion. Track `endsAt` or use `entitlementUpdate` for lapses.
 - Root imports (`Button`, `ButtonStyle`, `ActionRow`, `Command`, `Declare`, `CommandContext`, `createEvent`, `SKUType`, `EntitlementType`) all come from `'seyfert'`. No deep import needed.
-- External prerequisite: monetization must be enabled in the Discord developer portal and SKUs created there before any of this works; that step is outside Seyfert.

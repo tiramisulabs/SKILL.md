@@ -245,25 +245,7 @@ await client.start();
 - Docs centralized-cache example sets only the worker `WorkerAdapter` -> for an actual shared backend you must ALSO call `manager.setCache(...)` on the manager (defaults to `MemoryAdapter`); the `WorkerAdapter` reaches it via `parentPort`/`process.send` automatically.
 - The `WorkerClientOptions.postMessage` option is NOT required for centralized cache — it only overrides the adapter's transport (workerclient.ts:144).
 
-## Source Anchors
-
-- src/index.ts:50-52 (exports of `ShardManager`, `WorkerManager`, and types `ShardData`/`ShardManagerOptions`/`WorkerData`/`WorkerManagerOptions`/`WorkerInfo`/`WorkerShardInfo`)
-- src/websocket/discord/shared.ts (`WorkerManagerOptions` union :99-114, `WorkerManagerOptionsBase` :75-97, `CustomManagerAdapter` :70-73, `WorkerData` :181-196, `ShardData` :116-131, `ShardManagerOptions` :23+, `ShardDisconnectData`/`ShardReconnectData` :13-21, `ShardSocketCloseCodes` :172-179)
-- src/websocket/discord/workermanager.ts (`WorkerManager`, `setCache`/`setRest` :98-104, constructor defaults :81-96, `start`)
-- src/client/workerclient.ts (`WorkerClient`, `setServices` :142, `latency` :115, `calculateShardId` :436, `tellWorker` :456, `tellWorkers` :469, `resumeShard` :510, `WorkerClientOptions` :623, deprecated `onShardDisconnect`/`onShardReconnect` :627-633)
-- src/cache/adapters/workeradapter.ts (`WorkerAdapter`, `CACHE_TIMEOUT` :42)
-- src/websocket/discord/sharder.ts + shard.ts (`ShardManager` methods, `Shard.ping`/`latency`/`isOpen`/`resumable`)
-- src/events/hooks/custom.ts (`SHARD_DISCONNECT`, `SHARD_RECONNECT`, `WORKER_READY`, `WORKER_SHARDS_CONNECTED`)
-- src/commands/applications/shared.ts + src/client/plugins/types.ts:32 (`ParseClient`, `SeyfertRegistry`)
-
 ## Agent Guidance
 
-- Default to letting `Client` shard internally. Introduce `WorkerManager` + `WorkerClient` only when you need true parallelism across threads/processes.
-- The `path` points to the COMPILED worker entry (`./dist/client.js`) for Node; for Bun/Deno point at the TS source. Required for `threads`/`clusters`, optional for `custom`.
-- The mode literal is `'clusters'` (plural) — `'cluster'` fails the type check.
-- For shared cache across workers: put `WorkerAdapter` on every worker AND set the real backend on the manager with `manager.setCache(...)`. Default manager cache is `MemoryAdapter`. Do NOT also pass `postMessage` unless you are replacing the transport.
 - `tellWorker`/`tellWorkers` `eval` a stringified function in the target worker — closures over outer scope DO NOT transfer; pass data via `vars` (JSON-serialized). Both reject with `SeyfertError('WORKER_TIMEOUT')` after 60s.
-- Set `sendPayloadToParent: true` only if the manager must receive every gateway packet; it defaults to `false` for startup/perf on large bots.
-- Don't reach for `client.gateway` on a `WorkerClient` — it's undefined; use `client.shards` / `client.latency`.
-- Prefer the `SHARD_DISCONNECT`/`SHARD_RECONNECT` events over the deprecated `onShardDisconnect`/`onShardReconnect` callbacks (those can double-fire).
 - Register the worker client type with `interface SeyfertRegistry { client: ParseClient<WorkerClient> }` — NOT the old `UsingClient` augmentation.

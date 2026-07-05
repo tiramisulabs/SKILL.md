@@ -28,7 +28,7 @@ Plugin hooks — `SeyfertPluginHooks` (`types.ts:199-209`), subscribed with `api
 - `'plugins:setupComplete'` / `'plugins:ready'` — `[client]`.
 - `'commands:beforeLoad'` — `[client, dir?]`; `'commands:afterLoad'` — `[metadata: PluginLoadedMetadata<'commands'>]`.
 - `'components:beforeLoad'` — `[client, dir?]`; `'components:afterLoad'` — `[metadata: PluginLoadedMetadata<'components'>]`.
-- `'events:beforeLoad'` AND `'events:afterLoad'` — both `[client, dir?]` (events:afterLoad is NOT metadata, unlike commands/components).
+- `'events:beforeLoad'` AND `'events:afterLoad'` — both `[client, dir?]`.
 - `'client:close'` — `[client]`.
 
 `PluginLoadedMetadata<TKind>` carries `kind`, `total`, `items`, and `plugin.{ total, sources }` (`types.ts:128+`). Handlers return `Awaitable<unknown>`; a throwing hook is caught, wrapped (`hook:<name>`), routed to plugin event-error observers, and logged (`plugins.ts:518-558`) — it does not abort startup.
@@ -44,7 +44,7 @@ Requirements — a plugin's `requires?: readonly PluginRequirementInput[]` (`typ
 - `{ capability: SharedKey, optional?: boolean }` (a shared-value requirement).
 At runtime `api.has(req)` checks a `` `plugin:${string}` `` requirement; capability requirements are validated after register (`plugins.ts:360`). `range` accepts `'1.2.3'`, `'>=1.2.3'`, `'^1.2.3'`, `'~1.2.3'`.
 
-Shared state — `createSharedKey<T>(name)` (or curried `createSharedKey<T>()(name)`) returns a frozen `SharedKey<T, Name>` (`shared.ts:22-31`). Producers call `api.shared.set(key, factory, { dispose?, override? })`; consumers read `client.shared.get(key)` / `client.shared.unwrap(key)` / `client.shared.has(key)` (`types.ts:43-48`). `dispose` runs during teardown.
+Shared state — `createSharedKey(name)` returns a frozen `SharedKey<unknown, Name>` (the type param binds the NAME, not the value); for an explicit value type use the curried `createSharedKey<T>()(name)` → `SharedKey<T, Name>` (`shared.ts:22-31`). Producers call `api.shared.set(key, factory, { dispose?, override? })`; consumers read `client.shared.get(key)` / `client.shared.unwrap(key)` / `client.shared.has(key)` (`types.ts:43-48`). `dispose` runs during teardown.
 
 Ordering — `PluginOrder` enum (`types.ts:69-72`): `Before = 'before'`, `After = 'after'`. `PluginOrderOpt = PluginOrder.Before | PluginOrder.After | number`. Pass `{ order }` to contribution methods (events, observers, wrappers, hooks, …) to bias placement within its band.
 
@@ -103,7 +103,7 @@ Shared state across plugins, with a `dispose` that runs on teardown:
 import { createPlugin, createSharedKey } from 'seyfert';
 
 // A typed handle two plugins can agree on without importing each other.
-export const dbKey = createSharedKey<Database>('db');
+export const dbKey = createSharedKey<Database>()('db');
 
 export const databasePlugin = createPlugin({
     name: 'database',
@@ -257,22 +257,6 @@ await client.gateway.disconnectAll(); // close() does NOT touch the gateway
 - Docs list error phases including `gateway.wrapSendPayload` but omit several -> `phase` is an open string; also emitted: `gateway.onDispatch`, `autocomplete.wrap`, `cache.resource`, `hook:<name>`, `reload`, `requires`, `resolve`, `shared.<name>` (`api.ts`, `plugins.ts`).
 - Otherwise the lifecycle description, startup-order list, reverse-teardown behavior, and "what is not a plugin API" section are accurate against source.
 
-## Source Anchors
-
-- `src/client/plugins.ts` — `createPlugin`/`definePlugins`/`createPluginFactory`/`createContextScope`, `setupClientPlugins`, `teardownClientPlugins` (reverse order + aggregate errors), `runPluginHooks`, re-exports (`SeyfertPluginError`, `SeyfertPluginAggregateError`, `createSharedKey`, `PluginOrder`).
-- `src/client/plugins/types.ts` — `SeyfertPlugin`, `SeyfertPluginApi`, `SeyfertPluginTeardownApi`, `SeyfertPluginHooks`, `PluginHookName`, `PluginLoadedMetadata`, `PluginLifecycleStatus`, `PluginLifecyclePhase`, `PluginDiagnostics`, `PluginDiagnosticMessage`, `PluginRequirementDiagnostic`, `PluginRequirementInput`, `PluginOrder`, `ResolvedPluginList`, `SharedKey`.
-- `src/client/plugins/api.ts` — `createPluginApi`, scope `'setup'`/`'teardown'`, `assertCanMutate` (teardown read-only), full api surface (events/commands/rest/hooks/handlers/components/modals/middlewares/autocomplete/gateway/cache/shared/langs/reload/diagnostics/options).
-- `src/client/plugins/registry.ts` — diagnostics field assembly, list cap 50 / `truncated`, requirement validation.
-- `src/client/plugins/errors.ts` — `SeyfertPluginError`, `SeyfertPluginAggregateError`, `wrapPluginError`, `createPluginConflictError`.
-- `src/client/plugins/shared.ts` — `createSharedKey`, `addPluginShared`/`removePluginShared`, disposal.
-- `src/client/base.ts:391-422` — verified startup sequence (`setupPlugins` → hooks → cache → langs → commands → components) and `client.close()` (does NOT close gateway/REST/cache adapter).
-
 ## Agent Guidance
 
 - Import everything from root: `import { createPlugin, definePlugins, createSharedKey, PluginOrder, SeyfertPluginError, SeyfertPluginAggregateError } from 'seyfert'`. No deep `seyfert/lib/...` import needed.
-- For health checks / optional-dependency UX, read `client.plugins.diagnostics`: inspect `status`, `requirements` (`satisfied`/`optional`/`range`), and `messages` (severity `info|warn|error`) — not a `warnings` field.
-- When detecting plugin failures at `client.start()`/`client.close()`, match BOTH `SeyfertPluginError` and `SeyfertPluginAggregateError`.
-- Put async resource startup in `setup` (it can use this plugin's and imported plugins' client helpers) and release in `teardown`. teardown is read-only — it inspects (`has`, `diagnostics.warn`, `shared.has`) and cleans up its own resources, never `*.add(...)`.
-- For cross-plugin contracts use `createSharedKey` + `api.shared.set`/`client.shared.unwrap`; declare hard deps with `requires` and gate optional behavior with `api.has(...)`.
-- For observability hook into `commands:afterLoad` (metadata), `plugins:ready`, or `client:close`; remember `events:afterLoad` is `[client, dir]`, not metadata.
-- `client.close()` only handles plugin teardown — close the gateway, REST, and cache adapter yourself.

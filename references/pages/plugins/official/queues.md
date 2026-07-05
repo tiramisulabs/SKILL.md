@@ -249,21 +249,12 @@ process.on('SIGTERM', () => {
 - None for core APIs. `definePlugins` (`:283`), `createPlugin` (`:240`), `createPluginFactory` (`:267`), `SeyfertRegistry` (`types.ts:32`), `new Client({ plugins })` (`base.ts:195/272`), and `client.close()` (`base.ts:502`) all match ./src exactly and resolve from the `'seyfert'` root barrel.
 - The MDX comment says jobs are "switched on the `job` field" but the handler/registration switches on `job.name` — the `job` key is the discriminant in the `RegisteredQueues` registration; `name` is the runtime field on the job object. Package convention, not a core conflict; verify against the installed `@slipher/queues` types.
 - Queue decorators/drivers/registry methods are NOT in core Seyfert; they cannot be source-verified here. Treat the queue API as doc-authoritative and confirm against the installed package version.
-- v5 reminders that touch these examples (verified in checklist): option keys must be lowercase; `write`/`editOrReply` return `void` unless the response flag is `true`; middleware uses `stop()` (no `pass()`); custom event `run` is `Awaitable<unknown>` with no trailing `shardId`.
+- Surrounding command/event code follows the standard v5 conventions checklist — see plugins.md.
 
 ## Source Anchors
 
-- `src/client/plugins.ts` — `createPlugin` :240, `createPluginFactory` :267, `definePlugins` :283-289, `createContextScope` :291
-- `src/client/plugins/types.ts` — `SeyfertRegistry` :32, `PluginClientMap` :244, `RegisteredPlugins` :286 (consumes `SeyfertRegistry.plugins`)
 - `src/client/plugins/api.ts`, `registry.ts`, `shared.ts`, `order.ts`, `errors.ts` (plugin runtime: registry, shared services, ordering, error wrapping)
-- `src/client/base.ts` — plugins option :195, resolved :272, `close()` :502 (runs `client:close` hook; gateway/REST/cache untouched, :500)
-- `src/client/index.ts:13`, `src/index.ts:1` — barrel re-exports → root `'seyfert'` imports
 
 ## Agent Guidance
 
 - Use when a bot needs deferred/background work (media transcode, welcome flows, scheduled side effects, rendering). Reach for `memory()` for single-process bots; switch to `persistent()` only when jobs must survive restarts or span workers — the queue/processor code is identical.
-- EXTERNAL package: before editing production code, confirm it is installed and check its version/types — the queue API here is from docs, not core Seyfert. `pnpm add @slipher/queues` (+ `bullmq` for persistent).
-- One `@Process()` per `@Processor`; dispatch named jobs via `switch (job.name)`. There is no per-name framework dispatch.
-- `ctx.queues === client.queues === queuesPlugin.registry` (same object). Capture `registry` (not `client`) in services loaded by `index.ts` to avoid circular imports.
-- Gotchas: `add('name', { delay: '5s' })` is ambiguous → `TypeError`; pass an explicit `{}` third arg or non-string data. `retryDelay` only applies when `attempts > 1` (else `SLIPHER_QUEUE_RETRY_DELAY_NO_RETRIES`). Invalid duration strings → `InvalidDurationError`. Listener errors are isolated via `reportListenerError` and never alter job state.
-- Always wire `client.close()` to process signals so queues tear down cleanly (close() invokes plugin teardown — verified base.ts:502; note it does NOT close gateway/REST/cache).

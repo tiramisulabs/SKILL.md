@@ -227,19 +227,6 @@ async run(ctx: CommandContext) {
 - Enrichment beyond the doc (all source-confirmed): the `withResponse`/response-flag behavior on `write`/`deferReply`/`editOrReply`/`followup`; `deferReply(true)` ephemeral defer; `flags: MessageFlags.Ephemeral`; `AttachmentBuilder` files; `PollBuilder`; `message.reply`/`followup`.
 - v5 note (not a doc error, but relevant if copying component-handler code): `ComponentContext.editResponse` was REMOVED in v5 — use `ctx.editOrReply` in component contexts. `CommandContext.editResponse` and `ModalContext.editResponse` still exist.
 
-## Source Anchors
-
-- src/commands/applications/chatcontext.ts (write 88, modal 99, deferReply 107, editResponse 126, deleteResponse 140, editOrReply 145, followup 156, fetchResponse 163)
-- src/common/shorters/messages.ts (write 16, edit 42, crosspost 67, delete 78, fetch 100, purge 116, endPoll 131, getAnswerVoters 139, list 148)
-- src/structures/Message.ts (fetch 160, reply 164, edit 176, write 180, delete 184, crosspost 188, endPoll 192, getAnswerVoters 196)
-- src/common/types/write.ts (ResolverProps / MessageCreateBodyRequest / InteractionCreateBodyRequest body shapes)
-- src/builders/Attachment.ts (AttachmentBuilder 41, setFile 86), src/builders/Embed.ts, src/builders/ActionRow.ts, src/builders/Button.ts, src/builders/SelectMenu.ts, src/builders/index.ts
-
 ## Agent Guidance
 
-- Prefer `ctx.write` for the first response; switch to `ctx.editOrReply` whenever the handler may run before or after a response already exists (e.g. after `deferReply`, or in shared helpers).
-- Need the resulting message object from an interaction? Pass the response flag (`ctx.write(body, true)`) — without it you get `void`.
-- For ephemeral responses use `flags: MessageFlags.Ephemeral` (or `deferReply(true)`). No `ephemeral: true` field exists.
-- Send files with `AttachmentBuilder().setFile('buffer' | 'path' | 'url', data)` passed in `files: [...]`.
-- For channel sends decoupled from the command, use `ctx.client.messages.write(channelId, body)` → returns a `MessageStructure`.
 - In component handlers, do not reach for `editResponse` — it was removed from `ComponentContext` in v5; use `editOrReply`/`update`.

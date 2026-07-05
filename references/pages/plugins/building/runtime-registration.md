@@ -295,22 +295,6 @@ Bands run: `Before` (0) < numeric (1, lower number first) < default/unset (2) < 
 - "Do not return a promise from register" is enforced by the type (`register?(api): void`) and by `register` running inside synchronous `resolveClientPlugins` (`plugins.ts:357`); there is no `await`. Confirmed accurate.
 - `api.langs.contribute(locale, values, opts)` — `opts` is REQUIRED (`{ prefix }`), not optional (`types.ts:465`).
 
-## Source Anchors
-
-- `src/client/plugins.ts` — `createPlugin`, `definePlugins`, `createPluginFactory`, `createContextScope`, `resolveClientPlugins`, `setupClientPlugins`/`teardownClientPlugins`, option/middleware/default composition.
-- `src/client/plugins/api.ts` — `createPluginApi`, full `api.*` implementation, `assertCanMutate` teardown guards, global-middleware fragment on `middlewares.add`.
-- `src/client/plugins/types.ts` — `SeyfertPluginApi`, `SeyfertPlugin`, `SeyfertPluginTeardownApi`, `PluginLoadedMetadata`, `SeyfertPluginHooks`/`PluginHookName`, `PluginOrder`, `PluginRequirementInput`, contribution option types.
-- `src/client/plugins/order.ts` — band ordering (Before 0 < numeric 1 < default 2 < After 3, then sequence).
-- `src/client/plugins/shared.ts` — `createSharedKey` overloads, shared ownership/override/dispose.
-- `src/events/event.ts:7` — `CustomEvents` (`commandsLoaded`, `componentsLoaded`, `uploadCommands`).
-- `src/client/base.ts:415-423` — `reloadPluginContributions` emits loaded metadata via hooks + custom events.
-- `src/client/index.ts` — `export * from './plugins'` (root re-export).
-
 ## Agent Guidance
 
-- Use `register` for declarative, synchronous contributions only. Anything async belongs in `setup`; clean up in `teardown`.
 - Prefer typed hooks (`api.hooks.on('commands:afterLoad', ...)`) for loaded metadata when you want `PluginHookName` autocompletion; the `commandsLoaded`/`componentsLoaded` events deliver the identical payload on the client event bus.
-- For shared services across plugins, use `createSharedKey<T>()(name)` + `api.shared.set(key, factory, { dispose })`, consume with `client.shared.unwrap(key)` (throws) or `.get(key)` (`T | undefined`), and declare `requires` to enforce presence/version.
-- Instrument REST/gateway with `api.rest.observe`/`api.gateway.onDispatch` (stackable, isolated failures) instead of overwriting client callbacks.
-- Use `{ order: PluginOrder.Before | PluginOrder.After | <number> }` to position contributions; lower numbers run first, ties broken by registration sequence.
-- Duplicate names/custom IDs and conflicting contributions surface as attributed `SeyfertPluginError`/diagnostics at install time; pass `{ override: true }` to intentionally replace.

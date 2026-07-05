@@ -304,22 +304,5 @@ if (message.poll) {
 
 ## Source Anchors
 
-- src/builders/Poll.ts (PollBuilder, PollMedia, toJSON validation throws, emoji resolution)
-- src/structures/Poll.ts (Poll structure: end, getAnswerVoters, expiry getters, camelCased APIPoll)
-- src/structures/Message.ts:50,192-200 (Message#poll, endPoll, getAnswerVoters)
-- src/common/types/write.ts:29 (message body `poll?: PollBuilder | RESTAPIPollCreate`)
-- src/events/hooks/message.ts:63-69 (MESSAGE_POLL_VOTE_ADD/REMOVE -> toCamelCase)
 - src/common/shorters/messages.ts:131-142 (messages.endPoll, getAnswerVoters)
-- src/api/Routes/channels.ts:213 (ValidAnswerId = 1..10)
 - src/types/payloads/poll.ts:84-110 (APIPollResults: is_finalized, answer_counts[{ id, count, me_voted }])
-- src/builders/index.ts (barrel re-export of Poll)
-
-## Agent Guidance
-
-- Build polls with `PollBuilder` and pass the instance straight into the `poll` field of `messages.write` / `editOrReply` — no manual `.toJSON()`.
-- Always `setQuestion` and at least one answer before sending; a missing question or empty answers THROWS in v5. A bad emoji throws as soon as it is added.
-- `setDuration` takes hours (max 768). Discord caps answers at 10; the builder will not stop you, so validate inputs.
-- Answer ids are 1-based and in insertion order; use them for `getAnswerVoters(id)` and `results.answerCounts[].id`.
-- To receive votes, add `GuildMessagePolls` and/or `DirectMessagePolls` intents.
-- For poll completion, listen to `messageUpdate` and check `newMessage.poll?.results?.isFinalized`; read `results.answerCounts` ({ id, count, meVoted }) for totals.
-- Ending a poll: `Message#endPoll()` (when you hold the message) or `Poll#end()` (when you hold the `Poll` structure). Voter lists: `getAnswerVoters(answerId, checkAnswer?)` exists on both.

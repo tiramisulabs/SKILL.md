@@ -172,17 +172,6 @@ export default class HelpCommand extends Command {
 - Verification status corrected from "External package" only to "Source-verified (core) + external package": the integration surface (`definePlugins`, `commands.prefix/reply`, `ParseClient`, `InternalOptions`/`SeyfertRegistry`) is all in core and verified.
 - MDX vs core: aligned. `definePlugins`, `ParseClient`, `commands.prefix`/`reply` signatures match the MDX usage exactly.
 
-## Source Anchors
-
-- `src/client/plugins.ts` — `createPlugin` (240-265), `definePlugins` (283-285)
-- `src/client/plugins/types.ts` — `SeyfertRegistry` (32), `AnySeyfertPlugin` (259), `RegisteredPlugins` (286), `SeyfertPlugin` shape with `register`/`setup`/`teardown` (509-511)
-- `src/client/client.ts` — `ClientOptions.plugins` (305); `commands.prefix` (317) / `deferReplyResponse` (318) / `reply` (319)
-- `src/commands/applications/shared.ts` — `InferWithPrefix` (23), `ParseClient` (48), `InternalOptions` (52)
-- `src/index.ts` -> `src/client/index.ts:13` (root barrel re-export of `./plugins`, incl. `definePlugins`)
-
 ## Agent Guidance
 
 - Use this page when a user wants prefix/text commands, named-option parsing, dynamic per-guild prefixes, or interactive message watchers. For v5, ALWAYS use the plugin path (`Yuna.plugin` + `definePlugins`) — do NOT recommend the v4 `setServices`/`HandleCommand`-subclass approach.
-- Walk users through both required switches (`withPrefix: true` AND `commands.prefix`) plus the `SeyfertRegistry { plugins: typeof plugins }` augmentation — missing any one is the most common breakage.
-- The same `Command` class handles slash + prefix; do not generate a separate text-command type.
-- GOTCHA: `Yuna.plugin`, `@Watch`, `Yuna.watchers`, and `client.yuna`/`ctx.yuna` are NOT in core Seyfert — they come from `yunaforseyfert`. Their option names are doc-authoritative; tell users to verify the installed `yunaforseyfert` version. Everything under `seyfert` root imports (`definePlugins`, `ParseClient`, `commands.prefix/reply`, `InternalOptions`, `SeyfertRegistry`, `Command`/`Declare`/`Options`/`create*Option`) IS source-verified above.

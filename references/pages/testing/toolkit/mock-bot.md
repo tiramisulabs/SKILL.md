@@ -26,11 +26,11 @@ Core seyfert APIs this toolkit dispatches against (verified in ./src):
 - `globalMiddlewares` option — `src/client/base.ts:1255` (`readonly (keyof ResolvedRegisteredMiddlewares)[]`).
 - `plugins` / `clientOptions` — `ClientOptions<TPlugins>` at `src/client/client.ts:303`, `plugins?: TPlugins` at `client.ts:305`.
 - Loaders used by `loadFromConfig` / `*Dir` options: `loadCommands(dir?)` `base.ts:1127`, `loadComponents(dir?)` `base.ts:1135`, `loadLangs(dir?)` `base.ts:1160`, `loadEvents(dir?)` `client.ts:108`. Defaults resolve from `getRC()` config `locations` (`base.ts:1188`).
-- `Routes` (used as `Routes.x` in `dispatch.until`) — exported from root `seyfert` via `src/api/index.ts` (`export * from './Routes'`, re-exported by `src/index.ts:16`).
+- `Routes` (used as `Routes.x` in `dispatch.until`) is NOT a runtime `seyfert` export — `export * from './Routes'` in `src/api/index.ts` re-exports only route *type* interfaces (`./Routes` is a directory of them). Import the matcher from `@slipher/testing` or `discord-api-types/v10` (as example 4 does), or pass a predicate over the recorded action.
 
 ## Code Examples (verified)
 
-Imports of `createMockBot` come from `@slipher/testing`; `Routes` and core classes come from `seyfert`.
+Imports of `createMockBot` come from `@slipher/testing`; core classes come from `seyfert`; the `Routes` matcher comes from `discord-api-types/v10` (or `@slipher/testing`), not `seyfert`.
 
 ### 1. Slash command through the real pipeline
 
@@ -263,22 +263,14 @@ await using bot = await createMockBot({
 
 ## Doc vs Source Corrections
 
-- None for core surfaces — `setServices` `middlewares`, `globalMiddlewares`, `plugins`/`clientOptions`, the loaders, `CommandContext`, `HandleCommand`, and `Routes` all match the doc's usage against `./src`.
+- None for core surfaces — `setServices` `middlewares`, `globalMiddlewares`, `plugins`/`clientOptions`, the loaders, `CommandContext`, and `HandleCommand` all match the doc's usage against `./src`. `Routes` is NOT a runtime `seyfert` value (only route *type* interfaces via `export * from './Routes'`) — import the `Routes.x` matcher from `@slipher/testing`/`discord-api-types` (example 4 uses `discord-api-types/v10`).
 - v5 reminder (not a doc error, but relevant when writing the handlers under test): middleware uses `stop()`/`stop('reason')` (no `pass()`); `setServices({ handleCommand })` takes the `HandleCommand` *constructor*, not an instance; component contexts dropped `editResponse`.
 - `createMockBot` and all `bot.*`/`Dispatch`/`result.*` members are EXTERNAL (`@slipher/testing`) and are NOT present anywhere in `./src` (grep for `createMockBot`/`MockGateway`/`onUnhandledRest`/`simulateGateway` returns no core hits). Do not assume these exist in core Seyfert; pin/verify the toolkit version installed in the consuming project. In particular the exact component/modal dispatcher names (`bot.component(...)`, `.fillModal(...)`) shown above are doc/version-dependent — confirm them in your installed `@slipher/testing`.
 
 ## Source Anchors
 
-- `src/commands/handle.ts` (`HandleCommand` class :64; prefix dispatch :368)
-- `src/commands/applications/chatcontext.ts:45` (`CommandContext`)
-- `src/client/base.ts` (`setServices` :309; `globalMiddlewares` :1255; loaders :1127/:1135/:1160; `getRC` :1188)
-- `src/client/client.ts` (`ClientOptions`/`plugins` :303-305; `loadEvents` :108)
 - `src/api/index.ts` (`Routes` export) + `src/index.ts:16` (`export * from './api'`)
 
 ## Agent Guidance
 
 - Use the mock bot for true end-to-end behavior tests (option parsing, middleware order, error hooks, REST side effects, component/modal flows, plugin lifecycle) where `mockCommandContext()` is too shallow.
-- It is an external dev-dependency: confirm `@slipher/testing` is installed and check its version's option/result shape before relying on specific members — they are not guaranteed by core Seyfert.
-- Awaiting a `Dispatch` guarantees everything `run()` awaited (replies, edits, followups, dispatch actions). Use `dispatch.until(...)` to suspend mid-flight (`response` stays `undefined`), and `waitForAction()` only for fire-and-forget work the command did NOT await.
-- For modal-opening commands always use `.fillModal(...)`/`.timeoutModal()` in the dispatch chain; for prefix tests set `prefixes` (+ `mentionAsPrefix`) and use `bot.say(...)`.
-- When writing the handlers these tests drive, follow v5 context/middleware rules (no `pass()`, no component `editResponse`, response flag controls return value) so the assertions match real behavior.

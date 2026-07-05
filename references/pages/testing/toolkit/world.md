@@ -239,20 +239,7 @@ expect(result.reply?.body.data).toMatchObject({ content: 'Pong!' });
 - None for the core APIs. `CacheFrom.Test`, `GuildMember.voice()`, `BaseCommandInteraction.guild()/channel()` (with `GuildCommandContext` narrowing), `client.cache.roles.values()`, `client.cache.voiceStates.values()`, and `client.channels.fetchMessages()` all exist and behave as the docs describe (verified against the target project installed `seyfert` package or provided Seyfert source). The entire toolkit surface (`mockWorld`, `createMockBot`, builders, readers, `snapshot`/`diff`, `apiRole`, `permissionBits`, `apiError`, `Routes`, `setData`/`worldData`) lives in the EXTERNAL `@slipher/testing` package and could not be verified against core Seyfert — verify its version/signatures in the target project.
 - Note for v5: `member.ban(...)` / `client.members.ban(...)` now take `{ deleteMessageSeconds, reason }` (camelCase, reason inside the object) — reflected in the ban recipe above (changelog: Moderation breaking change).
 
-## Source Anchors
-
-- src/cache/index.ts:1158 — `CacheFrom` enum (`Gateway`, `Rest`, `Test`)
-- src/structures/GuildMember.ts:95 — `voice(mode?)` overloads (`'cache'` is sync)
-- src/commands/applications/chatcontext.ts:172,220,269,272 — `channel()` / `guild()` cache reads + `GuildCommandContext` narrowing
-- src/cache/resources/roles.ts:35,41 — `roles.values('*' | guildId)` / `valuesRaw()`
-- src/cache/resources/voice-states.ts:42 — `voiceStates.values()`
-- src/common/shorters/channels.ts:305 — `channels.fetchMessages()`
-
 ## Agent Guidance
 
 - Use this page when writing integration-style tests for commands/middleware that READ Discord state (permissions, voice, channels, message history), not just assert a REST call fired. World state answers "what did the bot build"; `bot.actions` answers "what calls happened".
-- The toolkit is EXTERNAL (`@slipher/testing`). Before relying on any `register*` / reader signature, check the installed version — names and options may drift from these docs. The seyfert CORE APIs it dispatches against are verified here.
-- Seed `registerBotMember` whenever the bot-authorization contract matters; otherwise moderation routes stay permissive.
-- Reach for `get` (throws on 0/many) when asserting uniqueness; `query` for optional; `all` for arrays.
-- Entities are written under `CacheFrom.Test`, so production cache reads resolve without interceptors. Only REST reads the command performs need stubbing (`bot.rest.intercept`) or `onUnhandledRest: 'warn' | 'silent'`.
 - When generating v5 bot code in these tests, use the v5 moderation shape (`ban({ deleteMessageSeconds, reason })`, `timeout(ms, reason)`) and root imports from `'seyfert'`.

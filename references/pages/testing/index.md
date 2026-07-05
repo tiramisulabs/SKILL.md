@@ -45,26 +45,26 @@ The two layers, sketched the way the docs describe them. Symbols are external an
 
 ```ts
 // fixtures layer — isolate a single run() body
-import { describe, expect, test } from 'vitest';
+import { expect, test } from 'vitest';
 import { mockCommandContext } from '@slipher/testing'; // external symbol — version-verify
 import PingCommand from '../src/commands/ping';
 
 test('ping replies with pong', async () => {
-  const ctx = mockCommandContext(); // records writes/edits; stubs logger/queues/scheduler
-  await new PingCommand().run(ctx as any);
-  // assert on what the command did to the recorded context (shape is package-defined)
-  expect(ctx /* e.g. ctx.replies / ctx.write calls */).toBeDefined();
+  // pass the command class + its options; ctx.run() drives the real run() body
+  const ctx = mockCommandContext(PingCommand, { options: {} });
+  await ctx.run();
+  expect(ctx.lastResponse()?.content).toBe('Pong!'); // recorded write/edit
 });
 ```
 
 ```ts
 // mock-bot layer — drive the real pipeline, assert on captured REST
-import { mockBot } from '@slipher/testing'; // external symbol — version-verify
-import { client } from '../src/index'; // your real configured Client
+import { createMockBot } from '@slipher/testing'; // external symbol — version-verify
+import PingCommand from '../src/commands/ping';
 
-const bot = await mockBot(client); // boots HandleCommand pipeline in-process, no gateway/token
-await bot.dispatchSlash?.('ping');  // dispatches a raw interaction through HandleCommand
-// assert against captured outgoing REST instead of a real network send
+await using bot = await createMockBot({ commands: [PingCommand] }); // in-process, no gateway/token
+const result = await bot.slash({ name: 'ping' });                  // real HandleCommand pipeline
+expect(result.content).toBe('Pong!');                              // assert captured output
 ```
 
 ### CORE (verified against ./src) — unit-testing without the toolkit
@@ -147,18 +147,9 @@ export default defineConfig({
 
 ## Source Anchors
 
-- `src/commands/handle.ts` (HandleCommand class `:64`; methods `interaction:274`, `chatInput:204`, `message:364`, `modal:259`, `messageComponent:266`, `autocomplete:67`, `contextMenu:112`, `entryPoint:168`, `makeResolver:599`, `argsParser:492`, `resolveCommandFromContent:500`; runContextScopes usage)
-- `src/commands/index.ts` (barrel — only `type CommandFromContent` re-exported from handle; `optionresolver` re-exported)
-- `src/commands/optionresolver.ts` (OptionResolver / OptionResolverStructure)
 - `src/index.ts:21` (root barrel; `export * from './commands'`)
-- `tests/` (repo's own Vitest suite — separate from `@slipher/testing`)
-- `tests/builder-validation.test.mts` (model for builder `toJSON()` validation assertions)
-- `tests/vitest.config.mts` (`fileParallelism:false`, `isolate:false`)
 
 ## Agent Guidance
 
 - This is an OVERVIEW page for an EXTERNAL package. Do not invent `@slipher/testing` exports — when a user asks for concrete test code, consult the installed package's types or the toolkit subpages, and always add "verify version in target project". The EXTERNAL examples above are conceptual sketches matching doc intent, not verified signatures.
 - For testing core Seyfert itself (this repo), there is NO `@slipher/testing` dependency; use plain Vitest. The CORE examples above are verified and copy-paste-ready.
-- Gotcha (v5): middleware control flow now uses `stop()` instead of `pass()`. Carried-over `pass()` is stale.
-- Gotcha: `HandleCommand` is not on the `seyfert` root export — deep-import `seyfert/lib/commands/handle` for a custom harness.
-- The mock-bot layer asserts on captured outgoing REST rather than real sends — the framing for "assertions without a gateway/token".

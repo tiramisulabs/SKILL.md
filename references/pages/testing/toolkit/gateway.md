@@ -206,17 +206,10 @@ test('joinVoice sends an op-4 VoiceStateUpdate on the guild shard', async () => 
 
 ## Source Anchors
 
-- `src/client/client.ts` (lines 41, 63-106) — `gateway: ShardManager`; `setServices` wraps `handlePayload` / `onShardDisconnect` / `onShardReconnect` / `handleSendPayload` and fires `SHARD_DISCONNECT` / `SHARD_RECONNECT` events.
-- `src/websocket/discord/sharder.ts` (lines 30, 81, 248, 299) — `ShardManager extends Map<number, Shard>`, `latency`, `setPresence`, `send`.
-- `src/websocket/discord/shared.ts` (lines 41-47) — `ShardManagerOptions` callbacks (`handlePayload`, `handleSendPayload`, `onShardDisconnect`, `onShardReconnect`).
 - `src/websocket/discord/shard.ts` (line 170) — `Shard.send`.
-- `src/index.ts` (lines 48, 68) — `export * from './types'` (enum re-export); `createEvent(...)` signature (`run: Awaitable<unknown>`).
-- `src/types/payloads/gateway.ts` (lines 100, 251), `src/types/utils/index.ts` (line 164) — `PresenceUpdateStatus`, `ActivityType`, `GatewayOpcodes` definitions.
 
 ## Agent Guidance
 
 - Use this page when writing unit/integration tests that drive gateway-facing logic (event handlers, presence logic, outbound `gateway.send`, shard-lifecycle/infra code) without a live connection. It pairs with `@slipher/testing`'s `createMockBot`.
-- External dependency: `@slipher/testing` is NOT shipped by core Seyfert. Confirm it is installed and check its installed version in the target project before relying on exact method names — the toolkit explicitly marks the mock gateway shape as unstable during 0.x.
 - For testing INTERACTION-driven logic (commands/components/modals) instead of gateway dispatch, see the sibling testing/toolkit pages — this one is specifically the gateway/world surface.
-- Enums (`ActivityType`, `GatewayOpcodes`, `PresenceUpdateStatus`) import cleanly from `'seyfert'`; no deep import needed.
 - Drive shard infra via Recipe B: simulate hooks -> wrapped callbacks -> `SHARD_DISCONNECT` / `SHARD_RECONNECT` events. Register those events on the mock bot to assert your reconnect/alerting logic.

@@ -8,8 +8,6 @@ Verification status: Source-verified (v5, the authoritative Seyfert source)
 
 Seyfert has a built-in i18n system. You place language modules in the `langs` directory (configured via `locations.langs`), each exporting a default object whose values are strings, nested objects, arrays, or functions returning strings. You register the locale shape into TypeScript with `ParseLocales<typeof <lang>>` under the `langs` key of the `SeyfertRegistry` augmentation (v5: NOT `DefaultLocale` directly — that type is now derived from the registry). You then read translations through `ctx.t` (interaction locale auto-selected) and `client.t(locale)`. The file name (minus extension) becomes the locale code.
 
-**Strongly recommended — constrain every non-default locale with `satisfies typeof <DefaultLang>`** (e.g. `export default { ... } satisfies typeof English`, importing the base locale with `import type English from './en-US.js'`). Only the base/default locale is left unconstrained (it defines the shape and is the one you pass to `ParseLocales`). This is NOT cosmetic: it makes TypeScript reject drift that otherwise fails *silently at runtime* — missing keys, misplaced/excess keys, and — most easily overlooked — **function/placeholder-shape drift**: a parameterized `(t) => ...` leaf accidentally translated as a plain string, or an object-arg leaf whose param keys don't match the base (e.g. a translator writing `` `songTitle}` `` instead of `` `{songTitle}` `` collapses the leaf to a `string` and `satisfies` flags it). Without the constraint, `ctx.t.foo(args)` on that locale throws "not a function" at runtime only for that language.
-
 ## Key APIs (verified)
 
 All of the following are re-exported from the root `'seyfert'` (`src/index.ts:44` -> `export * from './langs'`).
@@ -243,7 +241,6 @@ await client.langs.reloadAll(false);
 - File name (minus extension) IS the locale code (`parse()` -> `file.name.split('.').slice(0,-1)`). Name files to Discord locale strings (`en-US.ts`, `es-ES.ts`) OR wire alternate codes through `aliases` so e.g. `en-GB` resolves to `en.ts`.
 - `aliases` is `Record<string, LocaleString[]>` in `setServices` (canonical -> list of alias codes) but stored as `[string, LocaleString[]][]` on the handler; `getLocale(alias)` returns the canonical key.
 - `preferGuildLocale` only changes which locale `ctx.t` (no-arg) selects; `ctx.t.get('xx')` always forces `xx`.
-- Default export is recommended but NOT strictly required: `onFile` (`handler.ts:109`) accepts a module whose ONLY named export is an object (logs a warning), and SKIPS files with ambiguous/no valid object export (also a warning). It no longer fails silently.
 - `getKey` only returns leaves that are `string` — function/array/object leaves return `undefined` from it (it is for flat key lookup, not the proxy path).
 - v5 augmentation: do NOT `declare interface DefaultLocale` — augment `SeyfertRegistry.langs`. `DefaultLocale`, `UsingClient`, etc. are derived.
 
@@ -257,19 +254,4 @@ await client.langs.reloadAll(false);
 
 ## Source Anchors
 
-- `src/langs/handler.ts` (LangsHandler, onFile, getLocale, getKey, reload, reloadAll, onReload)
-- `src/langs/router.ts` (LangRouter, SeyfertLocale, __InternalParseLocale, ParseLocales)
 - `src/langs/index.ts`, `src/index.ts:44` (barrel exports)
-- `src/client/base.ts:182` (`langs` field), `:1184` (`t()`), `:357-358` (setServices mapping), `:1394` (ServicesOptions.langs), `:446` (bindPluginLangReload)
-- `src/commands/applications/shared.ts:26` (DefaultLocale derived from SeyfertRegistry)
-- `src/commands/applications/chatcontext.ts:72` (ctx.t getter + preferGuildLocale); entrycontext/menucontext/componentcontext/modalcontext mirror it
-- `src/commands/decorators.ts:47` (@Locales), `:61` (@LocalesT), `:85` (defineGroups), group def types
-
-## Agent Guidance
-
-- Register exactly one `langs: ParseLocales<typeof <lang>>` in `SeyfertRegistry`; set a `default` locale so missing keys/locales fall back instead of throwing.
-- Prefer `ctx.t` for the interaction's locale; use `ctx.t.get(code)` to force a specific locale; use `client.t(code)` outside contexts (events/services).
-- Function leaves invoke at the leaf and resolve with `.get(locale?)`: `ctx.t.welcome(user, n).get()`. After `ctx.t.get(locale)` you hold a plain `DefaultLocale` object — call leaves directly.
-- Localize command name/description with `@LocalesT('a.b.name', 'a.b.description')` (i18n keys) or `@Locales({ name:[...], description:[...] })` (manual).
-- Keep secondary locales honest with `satisfies typeof English`. Name files to Discord locale codes or map via `aliases`.
-- Gotchas: `reload`/`reloadAll` throw under Cloudflare Workers; `preferGuildLocale` only affects the no-arg `ctx.t` selection; do not augment `DefaultLocale` directly in v5.

@@ -262,19 +262,8 @@ export const voicePlugin = createPlugin({
 - MDX capability buckets (client/ctx helpers, handlers, shared state, cache/langs, gateway/REST, lifecycle) map 1:1 to real `SeyfertPluginApi` members. No invented capability.
 - Confirmed `events:afterLoad` payload is `[client, dir]` (not metadata) — added as a gotcha. No other drift found.
 
-## Source Anchors
-
-- `src/client/plugins.ts` (createPlugin :240, createPluginFactory :267, definePlugins :283, createContextScope :291, setupClientPlugins :656, teardownClientPlugins :717, exports :40-158)
-- `src/client/plugins/types.ts` (SeyfertPlugin :492, SeyfertPluginApi :373, SeyfertPluginHooks :200, PluginOrder :69, PluginRequirementInput :90, SeyfertRegistry :32, Registered* :286, SeyfertPluginTeardownApi :479)
-- `src/client/plugins/shared.ts` (createSharedKey :22)
-- `src/client/plugins/order.ts` (ordering bands :33)
-- `src/client/plugins/errors.ts` (SeyfertPluginError, SeyfertPluginAggregateError, codes)
-- `src/index.ts`, `src/client/index.ts` (root barrel re-export)
-
 ## Agent Guidance
 
 - This is the conceptual landing page. To author a plugin route to `plugins/building/creating-plugins` (full `register` API); for ready-made packages route to `plugins/official`.
-- Always wrap the plugin list in `definePlugins(...)` AND augment `SeyfertRegistry.plugins` so registry types flow into `client.*`, `ctx.*`, and global middleware names.
 - Prefer `api.shared.*` + `createSharedKey` for cross-plugin state; prefer `client.*` (the `client` map) only for values the bot author should call directly.
-- For startup-failure debugging, catch and inspect `SeyfertPluginAggregateError.errors` / `.cause`.
 - Do not invent API members: the authoring surface is exactly the `SeyfertPluginApi` shape listed above.

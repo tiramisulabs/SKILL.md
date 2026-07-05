@@ -62,8 +62,7 @@ references/
   plugins.md                          # plugin authoring + official @slipher/* plugins
   i18n-cache-recipes.md               # i18n/langs, cache, structures, and recipes
   testing.md                          # @slipher/testing toolkit + unit tests
-  link-verification-matrix.md         # URL-by-URL coverage/verification audit
-  pages/                              # per-page deep notes for every docs URL
+  pages/                              # per-page deep notes (each carries its source URL, coverage ref, verification label)
 ```
 
 Open only the reference a task needs; `SKILL.md` routes you there.

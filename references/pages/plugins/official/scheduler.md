@@ -305,33 +305,7 @@ await client.start();
 
 None for the core integration surface. The MDX's use of `definePlugins`, the
 `declare module 'seyfert' { interface SeyfertRegistry { plugins } }` augmentation, and the
-`setup`/`teardown` lifecycle all match ./src exactly (anchors below). The `@slipher/scheduler`
+`setup`/`teardown` lifecycle all match ./src exactly. The `@slipher/scheduler`
 package itself is not in core Seyfert, so its decorator/driver/registry signatures could not be
 diffed against source — treat them as doc-authoritative and verify against the installed package
-version. Note (v5 accuracy): added examples use lowercase option keys, `as const` on `choices`, and
-`run(payload, client)` event signature (no `shardId`) per the v5 checklist.
-
-## Source Anchors
-
-- src/client/plugins.ts — `createPlugin` (240), `createPluginFactory` (267), `definePlugins`
-  (283-285, two overloads), `setupClientPlugins` (656), `teardownClientPlugins` (717).
-- src/client/plugins/types.ts — `SeyfertRegistry` (32), `PluginClientMap` (244), `PluginContextMap`
-  (250), `RegisteredPlugins` (286), `SeyfertPlugin` client/ctx/setup/teardown (504-511).
-- src/client/base.ts — `client:close` plugin hook on close (510).
-- src/index.ts — `createEvent` (68); barrel -> ./client -> ./client/plugins for root `seyfert` exports.
-
-## Agent Guidance
-
-- This is an EXTERNAL package. Before editing production code, confirm `@slipher/scheduler` is
-  installed and check that version's actual exports/signatures — the decorator/driver/registry names
-  here come from the MDX docs, not from Seyfert source.
-- The only hard Seyfert requirement is wiring the plugin like any other: build with `scheduler(...)`,
-  pass through `definePlugins`, augment `SeyfertRegistry['plugins']`, and hand `plugins` to
-  `new Client({ plugins })`. `ctx.scheduler` / `client.scheduler` only type-resolve after the
-  `declare module` augmentation.
-- When writing the surrounding bot code (commands/events/options), apply v5 rules: lowercase option
-  keys, `choices`/`channel_types` as `readonly`/`as const`, `ctx.write`/`editOrReply` return `void`
-  unless the response flag is `true`, and event `run(payload, client)` (no trailing `shardId`).
-- Prefer the in-process `memory()` driver for single-process bots; reach for `persistent()` only
-  when you run multiple replicas or need schedules to survive restarts, and then handle ids,
-  orphan purging, and graceful shutdown as in the gotchas above.
+version. Surrounding command/event examples follow the standard v5 conventions checklist — see plugins.md.

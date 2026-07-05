@@ -299,14 +299,9 @@ export default class Paginator extends ComponentCommand {
 
 ## Source Anchors
 
-- `src/builders/ActionRow.ts`
-- `src/builders/Button.ts`
-- `src/builders/SelectMenu.ts`
 - `src/builders/Modal.ts` (Modal, TextInput) + `src/builders/Label.ts`
 - `src/builders/types.ts` (ListenerOptions, ComponentCollectorStopReason, FixedComponents)
 - `src/builders/index.ts` (root builder re-exports + `fromComponent`)
-- `src/components/componentcommand.ts`
-- `src/components/componentcontext.ts`
 - `src/components/handler.ts` (createComponentCollector)
 - `src/structures/Interaction.ts` (componentType getter, `.values`, resolved entities)
 - `src/structures/Message.ts` (`createComponentCollector`)
@@ -315,7 +310,4 @@ export default class Paginator extends ComponentCommand {
 
 - Import every builder, `ButtonStyle`, `ComponentType`, `ChannelType`, `TextInputStyle` from `'seyfert'` — no deep `seyfert/lib/...` import needed.
 - Type the row for autocomplete: `new ActionRow<Button>()` / `<StringSelectMenu>()`. A row mixing buttons and selects is invalid at the Discord layer.
-- Always set a `customId` on interactive components (except link/premium buttons) — it is what `ComponentCommand._filter` matches (exact string or `RegExp.match`). Use a `RegExp` customId + `filter()` for dynamic/paginated ids.
-- For "press a button → answer here" flows, decide: persistent `ComponentCommand` (survives restarts) vs inline `message.createComponentCollector` (ephemeral, time-boxed).
-- Read selections from `ctx.interaction.values` (string selects, typed by the `StringSelectValues` generic) or `ctx.interaction.users/roles/channels/members` (entity selects).
 - `setRequired`/`setValuesLength` on selects matter mostly inside modals; for message rows you typically just set customId, placeholder, and options/defaults.

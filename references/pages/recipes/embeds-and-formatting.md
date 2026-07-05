@@ -304,25 +304,6 @@ await ctx.write({ content: Formatter.hyperlink('Invite me', url) });
 
 ## Source Anchors
 
-- `src/builders/Embed.ts`
-- `src/builders/Attachment.ts`
-- `src/common/it/formatter.ts` (`Formatter`, `TimestampStyle`, `HeadingLevel`, link types)
-- `src/common/it/utils.ts:41` (`resolveColor`), `:324` (`snowflakeToTimestamp`)
 - `src/common/it/constants.ts` (`EmbedColors`)
-- `src/common/types/resolvables.ts` (`ColorResolvable`)
 - `src/structures/Message.ts:76` (`createComponentCollector`)
 - `src/components/handler.ts:82` (collector `run`/`stop`/`waitFor`)
-- `src/index.ts` (root exports)
-
-## Agent Guidance
-
-- Always import `Embed`, `Formatter`, `AttachmentBuilder`, `TimestampStyle`, `HeadingLevel`,
-  `EmbedColors` from `'seyfert'`; no deep import is required for any of these.
-- When generating `Formatter.codeBlock`, put the code/content first and language second.
-- Validate user-supplied colors: unknown plain strings silently go black, but malformed `#hex` and
-  negative/non-integer numbers throw.
-- Send attachments with `ctx.write({ files: [builder] })`; reference them in an embed image/thumbnail
-  via `attachment://<filename>` matching `.setName(...)`.
-- Wrap URL/path attachments in try/catch and narrow with `SeyfertError.is(err, 'INVALID_ATTACHMENT_TYPE')`.
-- To paginate or collect interactions on an embed message, call `ctx.write(body, true)` to get the
-  `Message`, then `message.createComponentCollector(...)` and register `collector.run(customId, cb)`.

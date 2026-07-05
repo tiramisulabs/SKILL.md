@@ -12,11 +12,7 @@ Subcommands are classes that extend `SubCommand` (abstract, must implement `run`
 
 Discord allows max two nesting levels: `group > subcommand > options` OR `subcommand > options`. A `SubCommand` may carry basic options (`create*Option`) but cannot nest further subcommands.
 
-**Strongly recommended — organize every command that has subcommands into its OWN dedicated folder**: parent at `commands/<cat>/<cmd>/<cmd>.ts` + each subcommand at `commands/<cat>/<cmd>/commands/<sub>.ts`. This layout applies to BOTH loading strategies — the folders are identical, only the wiring differs:
-- `@AutoLoad()` — discovers the subfolder automatically. Here the dedicated folder is MANDATORY, not just tidy: `@AutoLoad` scans the parent's directory *recursively* (`getFiles(dirname(parentFile))`, `handler.ts:351-353`), so a parent sharing a folder with other commands silently swallows them as its subcommands.
-- `@Options([CreateSub, DeleteSub])` — the exact same folder layout, but you `import` each subcommand from the `commands/` subfolder and list them explicitly (no scan → no swallowing risk, so isolation is a convention here rather than a hard requirement).
-
-Use folders either way; pick `@AutoLoad` for convenience or `@Options` for explicit control. With `@AutoLoad`, keep helper-only files outside the parent's folder tree too: a `shared.ts`/`groups.ts`/resolver file under that folder is still scanned as a candidate subcommand. See examples 1, 2, 2b + the layout gotcha below.
+**Strongly recommended — organize every command that has subcommands into its OWN dedicated folder** (parent at `commands/<cat>/<cmd>/<cmd>.ts` + subcommands under `commands/<cat>/<cmd>/commands/`). This is MANDATORY for `@AutoLoad` — its recursive folder scan otherwise swallows sibling commands as subcommands — and a tidy convention for explicit `@Options([...])`. Pick `@AutoLoad` for convenience or `@Options` for explicit control. See example 2b for the worked layout and the layout gotcha below for the full rule.
 
 ## Key APIs (verified)
 
@@ -30,7 +26,7 @@ All imported from the root `'seyfert'` barrel (re-exported via `src/index.ts`).
 - `@Groups(groups)` — `src/commands/decorators.ts:107`. `Record<string, LocalizedGroupDefinition>`; sets `groups` and builds `groupsAliases` from each group's `aliases`.
 - `@GroupsT(groups)` — `src/commands/decorators.ts:91`. Translated variant; `Record<string, TranslatedGroupDefinition>` (uses `name`/`description` localization keys). Stored on `__tGroups` plus builds `groupsAliases`.
 - `defineGroups(groups)` — `src/commands/decorators.ts:85`. Identity helper returning the typed groups object (for the `@Group(def, name)` overload). Two overloads cover Localized vs Translated records.
-- `@AutoLoad()` — `src/commands/decorators.ts:177`. Sets `__autoload = true`. The handler then does `getFiles(dirname(parentFilePath))` — i.e. it scans the parent file's OWN directory **recursively** — and pushes every default-exported `SubCommand` it finds onto `options` (`src/commands/handler.ts:351-401`). Consequence (see layout gotcha below): the parent must live in its own dedicated folder, and subcommands may sit directly beside it OR in a nested subfolder (both are picked up by the recursive scan).
+- `@AutoLoad()` — `src/commands/decorators.ts:177`. Sets `__autoload = true`. The handler then does `getFiles(dirname(parentFilePath))` — i.e. it scans the parent file's OWN directory **recursively** — and pushes every default-exported `SubCommand` it finds onto `options` (`src/commands/handler.ts:351-401`). Consequence: the parent must live in its own dedicated folder (see the layout gotcha below).
 - Group types: `GroupDefinition`, `GroupDefinitions`, `LocalizedGroupDefinition`, `TranslatedGroupDefinition` — `src/commands/decorators.ts:68-83`. Both definition shapes require `defaultDescription`; optional `name`, `description`, `aliases`.
 - `CommandContext<T extends OptionsRecord, M>` — `src/commands/applications/chatcontext.ts:45`. Passed to `run`. `ctx.options` is typed `ContextOptions<T>` (`chat.ts:117`) — pass `CommandContext<typeof options>` to type a subcommand's own options. Narrowing guards: `isChat()` and `inGuild(): this is GuildCommandContext<T, M>` (`chatcontext.ts:256,260`).
 
@@ -326,19 +322,6 @@ export default class WeatherCommand extends Command {}
 - Docs imply `@Options([...])` and AutoLoad are interchangeable. Src distinction: `@Options([Class])` accepts named or default exports; `@AutoLoad()` only picks up `export default` SubCommands and warns/skips files without one (`src/commands/handler.ts:379-395`).
 - Otherwise aligned: `SubCommand`, `@Options([SubCommand])`, `@Group`, `@Groups`, `defaultDescription`, and `ctx.write` all match source.
 
-## Source Anchors
-
-- `src/commands/applications/chat.ts` (`Command`, `SubCommand`, `BaseCommand`; `Command.toJSON` group/subcommand emission at :375-405; `ContextOptions` at :117)
-- `src/commands/decorators.ts` (`@Declare`, `@Options`, `@Group`, `@Groups`, `@GroupsT`, `defineGroups`, `@AutoLoad`; group definition types :68-83)
-- `src/commands/handler.ts` (`__autoload` recursive scanning, default-export warnings, `stablishSubCommandDefaults` inheritance)
-- `src/commands/applications/chatcontext.ts` (`CommandContext`, `ctx.options`/`ctx.write`, `isChat`/`inGuild` guards :256-262, `GuildCommandContext` :265)
-- `src/commands/applications/options.ts` (`create*Option` helpers for subcommand options)
-
 ## Agent Guidance
 
-- Choose `@Options([...])` for explicit control (named exports OK) or `@AutoLoad()` for folder-convention loading (every discovered subcommand must be `export default`). With `@AutoLoad`, put the parent in its OWN dedicated folder (`<cmd>/<cmd>.ts` + `<cmd>/commands/<sub>.ts`) — the handler scans the parent's whole directory recursively, so a parent sharing a folder with other commands will swallow them as subcommands. Keep helper files outside that parent folder.
-- Reach for `defineGroups` + `@Group(def, name)` whenever you use groups — it turns a runtime build crash (typo'd group name) into a compile error.
-- Type a subcommand's own options by declaring the `options` object, decorating with `@Options(options)`, and writing `run(ctx: CommandContext<typeof options>)`.
-- Narrow with `ctx.inGuild()` inside `run` before touching guild-only data (`member`, guild channels) to get a `GuildCommandContext` with non-null fields.
-- For i18n group labels use `@GroupsT` + translation keys; for static labels use `@Groups` with `defaultDescription`.
 - All decorators/classes import from `'seyfert'`; no deep imports needed for the APIs on this page.

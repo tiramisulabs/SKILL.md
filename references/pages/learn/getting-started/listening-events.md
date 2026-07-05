@@ -255,23 +255,8 @@ export default [
 
 ## Source Anchors
 
-- src/index.ts (createEvent, config.bot/http exports; config.bot resolves intents)
-- src/events/event.ts (CustomEvents + 3 built-ins, ClientNameEvents, EventContext, CallbackEventHandler, ClientEvent)
-- src/events/handler.ts (EventHandler/CustomEventHandler, runCustom/emit, ResolveEventParams/ResolveEventRunParams, gateway run with shardId at 410/417, custom run without shardId at 118/125, array flatten 460-462, reload 430, overwrite-by-name 262/285)
-- src/events/hooks/index.ts (ClientEvents = ReturnType map)
-- src/events/hooks/custom.ts (BOT_READY, RAW_GUILD_DELETE payload shapes)
-- src/events/hooks/{message,guild,interactions,voice}.ts (messageCreate/guildMemberAdd/interactionCreate/voiceStateUpdate payloads)
-- src/client/client.ts (events: EventHandler, loadEvents, start)
-- src/client/workerclient.ts (events: EventHandler)
 - src/client/httpclient.ts (no gateway events)
-- src/client/base.ts (events: CustomEventRunner, RCLocations, RuntimeConfig(HTTP), uploadCommands)
 
 ## Agent Guidance
 
 - Event files must `export default createEvent(...)` (or an array of them); a file missing a `run` function is logged and skipped (src/events/handler.ts:258-261, 277-283).
-- One event per `name` — duplicate names overwrite; combine handlers.
-- For HTTP-only bots, do not expect gateway events; custom events via `runCustom` still work on the base handler.
-- Custom events require `CustomEvents` augmentation for typing (except the three built-ins); `runCustom` won't accept an unknown name otherwise.
-- `runCustom`/`emit` arguments exclude the client — it is appended automatically before `run`.
-- Remember `start()` does not upload application commands; call `client.uploadCommands(...)` separately.
-- Match intents to the events you handle; resolution happens through the `config.bot({ intents })` array.

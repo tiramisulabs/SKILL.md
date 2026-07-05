@@ -211,20 +211,4 @@ const emojiUrl = client.rest.cdn.emojis(emojiId).get({ extension: 'gif' });
 
 ## Source Anchors
 
-- `src/api/Router.ts` (proxy construction, `ProxyRequestMethod`, `CDNRouter`, `parseCDNURL`)
-- `src/api/api.ts` (`ApiHandler`, `proxy` getter :139, `cdn` :66, `request` :295, `observe` :119)
-- `src/api/shared.ts` (`ApiRequestOptions`, `HttpMethods`, `RawFile`, `RestObserver*`, `ApiHandlerOptions`)
 - `src/api/Routes/channels.ts` (`threads` route presence)
-- `src/client/base.ts` (`rest` :155, `proxy` getter :289)
-- `src/common/shorters/messages.ts` (`MessageShorter.write` :16), `src/common/shorters/reactions.ts` (`add` :9)
-- `src/structures/GuildMember.ts` (`guild()` overloads :61), `src/structures/channels.ts` (`isThreadOnly` :168), `src/structures/User.ts` (CDN URL helpers :41)
-
-## Agent Guidance
-
-- Prefer a shorter when one exists (`client.messages.*`, `client.channels.*`, `client.reactions.*`, structure helpers); they handle file resolution, body transformation, caching, and return rich structures. Drop to `client.proxy` only for endpoints with no shorter or new/in-development API versions.
-- Proxy returns RAW Discord API payloads (snake_case JSON), NOT Seyfert structures — no caching, no transform. The terminal call is one of `get/post/put/patch/delete` (lowercase) and takes a single `ApiRequestOptions` object.
-- IDs and dynamic path parts MUST be passed as function arguments: `client.proxy.channels(id)`, not `client.proxy.channels.id`.
-- Use `reason` for audit-log entries, `query` for querystrings, `files` (`RawFile[]`) for attachments. `body` is sent as JSON unless files force multipart (then mirror them in `body.attachments`).
-- For typed return values, the proxy already infers per-route types from `APIRoutes`; supply a generic only on the low-level handler: `client.rest.request<T>(method, url, opts)`.
-- Instrument REST with `client.rest.observe({...})` and keep the returned disposer for teardown — do not overwrite handler callbacks.
-- CDN URLs come from `client.rest.cdn.<segment>(...).get(...)` or, preferably, structure helpers (`user.avatarURL()`, `guild.iconURL()`).

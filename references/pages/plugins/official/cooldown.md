@@ -262,13 +262,6 @@ Gotchas (all verified against the MDX + the core surfaces below):
 
 ## Source Anchors
 
-- `src/client/plugins.ts` — `definePlugins` (283-285), `createPlugin` (240-265), `ResolvedClientPlugins`.
-- `src/client/plugins/types.ts` — `SeyfertRegistry` (32), `RegisteredPlugins` (286),
-  `RegisteredPluginMiddlewares` (291), `MiddlewaresOf`/`PluginMiddlewaresOf`.
-- `src/commands/decorators.ts` — `Middlewares` (188), `RegisteredMiddlewares` /
-  `ResolvedRegisteredMiddlewares` (14-20).
-- `src/common/it/formatter.ts` — `Formatter.timestamp(date|ms, style='R')` (244), used in the
-  relative "try again" recipe; defaults to relative time, accepts a `Date` directly.
 - `src/components/componentcommand.ts` — `ComponentCommand` (`componentType` 17, `customId` 18,
   `filter` 19, `run` 20), backing the button-gating recipe.
 - `src/index.ts` / `src/client/index.ts` — barrels re-export `./plugins`, so all of the above
@@ -276,22 +269,7 @@ Gotchas (all verified against the MDX + the core surfaces below):
 
 ## Agent Guidance
 
-- This is an external plugin: before editing production code, confirm `@slipher/cooldown` is
-  installed and check its version — the option names/signatures here come from the docs, not
-  from core Seyfert.
-- Root imports (`Client`, `definePlugins`, `Command`, `Declare`, `Middlewares`, `CommandContext`)
-  come from `'seyfert'`. The cooldown plugin's exports (`cooldown`, `Cooldown`,
-  `CooldownMiddlewares`) come from `'@slipher/cooldown'`.
-- Two type-augmentation gotchas: (1) augment `SeyfertRegistry.plugins` so the client knows the
-  plugins; (2) when you pass `middleware` as an OBJECT (not `true`), the middleware TYPE is no
-  longer auto-inferred — add it manually via `CooldownMiddlewares<'name'>`.
-- Behaviors that throw: the zero-arg `ctx.cooldown.consume()` throws outside a Seyfert handler
-  (use the explicit `{ name, target }` form in tests/jobs); requesting a `cost` greater than the
-  bucket limit throws a `RangeError`.
 - For `guild`/`channel` scopes, DMs fall back to `author.id`; a custom resolver returning
   `undefined` skips the cooldown for that invocation. Subcommands use
   `subcommand.cooldown ?? parent.cooldown`.
 - Shared `group` buckets use key `${group ?? resolvedCommandName}:${typeLabel}:${target}`.
-- Atomic `consume` only engages when the cache adapter sets `supportsAtomicCooldowns: true` and
-  exposes a Redis-style `eval`; `check`/`reset` are never atomic, so make `consume` the
-  admission authority in multi-worker setups.

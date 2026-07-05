@@ -273,28 +273,8 @@ await client.uploadCommands(); // applicationId resolved from getRC()
   `node:http` adapter) follows the identical pattern: emit ESM, register manually, attach an
   adapter that calls `client.onInteractionRequest(...)`.
 
-## Source Anchors
-
-- `src/client/httpclient.ts` — `HttpClient` class + `start`.
-- `src/index.ts:76-103` — `config.bot` / `config.http`, static-config assignment.
-- `src/client/base.ts:209,365,961,1056,1188-1239,1336-1386` — `_seyfertCfWorkerConfig`, `execute`
-  stub, `onInteractionRequest`, `uploadCommands`, `getRC`, `StartOptions`, RC types.
-- `src/common/it/utils.ts:313` — `isCloudflareWorker`.
-- `src/commands/handler.ts:309,674-684` — `commands.set`, `SeteableCommand`, `FileLoaded`.
-- `src/langs/handler.ts:71,78,109,155` — `langs.set`, reload throw, `onFile`, `LangInstance`.
-- `src/components/handler.ts:286,471` — `components.set`, `SeteableComponentCommand`.
-
 ## Agent Guidance
 
 - Use when targeting Cloudflare Workers (or any no-`fs`, ESM-only runtime). The two
   non-negotiables: (1) emit ESM (`module: "ESNext"`); (2) register everything manually with
   `.set([...])` because directory auto-loading relies on `fs`.
-- Import `seyfert.config.mjs` (side-effect) at the top of `index.ts` so the static config is in
-  place before `getRC()` runs.
-- `HttpClient` only validates/handles interactions; the HTTP transport is the adapter's job.
-  `@slipher/generic-adapter` is external — confirm its `start()`/`fetch()` API and version in the
-  user's project before editing.
-- Augment `SeyfertRegistry` (not `UsingClient`) for typed `ctx.client`. `config.http` requires
-  `publicKey` + `applicationId`; `port` is irrelevant on Workers.
-- Command registration to Discord (`uploadCommands`) is a separate one-off deploy step, not part
-  of the Worker request lifecycle.
