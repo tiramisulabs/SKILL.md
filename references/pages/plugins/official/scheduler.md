@@ -1,311 +1,212 @@
-# Scheduler (@slipher/scheduler)
+# Scheduler (`@slipher/scheduler`)
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/plugins/official/scheduler
 
-Coverage reference: plugins.md
+Coverage reference: `plugins.md`
 
-Verification status: Source-verified (core integration surface) + EXTERNAL package (@slipher/scheduler — verify version in target project)
+Verification status: Source-verified against current `tiramisulabs/extra/packages/scheduler` + Seyfert core
 
-## Page Summary
+## Contents
 
-`@slipher/scheduler` adds cron/interval task scheduling to a Seyfert v5 bot. Tasks live on a
-single **registry**; a **driver** decides where they run — `memory()` (in-process, Croner) or
-`persistent()` (BullMQ/Redis, restart-surviving and replica-coordinated). The same task code runs
-under either driver. Tasks are defined as decorated classes (`@Cron`/`@Interval`) or via imperative
-registry calls, and are reached through `ctx.scheduler`, `client.scheduler`, or a captured
-`registry` (all the same object). The package is EXTERNAL (not in core Seyfert); its
-decorators/drivers/registry API below come from the MDX docs and MUST be re-verified against the
-version installed in the target project. The Seyfert integration surface it relies on
-(`definePlugins`, `SeyfertRegistry` augmentation, plugin `setup`/`teardown` lifecycle, and
-`client`/`ctx` extension maps) IS verified against ./src.
+- [Contract](#contract)
+- [Plugin setup](#plugin-setup)
+- [Registry API](#registry-api)
+- [Persistent schedules](#persistent-schedules)
+- [Events](#events)
+- [Lifecycle and gotchas](#lifecycle-and-gotchas)
+- [Source anchors](#source-anchors)
 
-## Key APIs (verified)
+## Contract
 
-Core Seyfert APIs the page uses (all root-importable from `seyfert`):
+`scheduler(options)` installs one `SchedulerRegistry` as `client.scheduler`, `ctx.scheduler`, and
+`schedulerPlugin.registry`. `createScheduler(options)` creates the same registry without a
+Seyfert plugin.
 
-- `definePlugins(...plugins)` / `definePlugins(plugins[])` — src/client/plugins.ts:283-285. Two
-  overloads: accepts a spread OR a single array; returns the tuple unchanged. Exported from
-  `seyfert` via `src/index.ts` -> `./client` -> `./client/plugins`.
-- `interface SeyfertRegistry {}` — src/client/plugins/types.ts:32. Augment with
-  `{ plugins: typeof plugins }` to register the plugin tuple for client/ctx type inference
-  (`RegisteredPlugins` reads `SeyfertRegistry['plugins']`, types.ts:286-288). Without this
-  augmentation `ctx.scheduler` / `client.scheduler` do NOT type-resolve.
-- Plugin `client` map (`PluginClientMap`, types.ts:244) — how a plugin attaches `client.scheduler`
-  (a factory `(client) => value`). Plugin `ctx` map (`PluginContextMap`, types.ts:250) — how it
-  attaches `ctx.scheduler` (a factory `(interaction, client) => value`). These are the mechanisms
-  behind `ctx.scheduler` / `client.scheduler`.
-- Plugin lifecycle: `setup(client, api?)` / `teardown(client, api?)` — types.ts:510-511, driven by
-  `setupClientPlugins` / `teardownClientPlugins` (src/client/plugins.ts:656,717). This is what the
-  docs mean by "the Seyfert lifecycle handles setup on start, teardown on close". Both return
-  `Awaitable<void>`.
-- `client.start()` / `client.close()` — base lifecycle; `close()` fires the `client:close` plugin
-  hook (src/client/base.ts:510, `runPluginHooks(this, 'client:close', this)`). Used by
-  `persistent()` to open Redis/BullMQ on start and release them on close.
-- `createPlugin` / `createPluginFactory` (src/client/plugins.ts:240,267) — the authoring helpers a
-  package like this uses internally to build its plugin object.
-- `createEvent({ data, run })` (src/index.ts:68) — `run(payload, client)` for gateway events
-  (v5 custom/non-gateway handlers no longer get a trailing `shardId`); reach the scheduler via the
-  `client` param or `entity.client.scheduler`.
+Required options:
 
-EXTERNAL `@slipher/scheduler` exports (doc-authoritative — verify version in target project):
+- `driver: SchedulerDriver` — `memory()` or `persistent()`.
 
-- `scheduler({ driver, tasks })` — builds the Seyfert plugin; exposes `.registry`.
-- `createScheduler({ driver })` — standalone registry, no Seyfert plugin; call `registry.setup()` yourself.
-- `memory()` — in-process Croner driver. Intervals tick at 1s resolution (sub-second rounds up).
-- `persistent({ connection, queueName, prefix, purgeOrphansOnStartup? })` — BullMQ/Redis driver.
-- Decorators `@Cron(expr, opts?)`, `@Interval(duration, opts?)`; type `ScheduledTask`.
-- Registry methods: `cron(id, expr, fn)`, `interval(id, duration, fn)`, `add(id, value, fn)`
-  (auto-detects cron vs interval), `get(id)`, `list()`, `snapshot()`, `pause(id)`, `resume(id)`,
-  `remove(id)`, `setup()`, `on(event, cb)` (returns unsubscribe), `once(event, cb)`.
-- Task options: `{ id, runImmediately? }`. `ScheduledTask` exposes `id`, `runCount`.
-- Events: `scheduled`, `started`, `completed`, `failed`, `paused`, `resumed`, `removed`.
-  `completed` payload `{ task, result }`; `failed` payload `{ task, error }`.
-- Durations: ms number or strings `'30s'`/`'5m'`/`'1h'`/`'1d'`, compound `'1h30m'`.
+Optional options:
 
-## Code Examples (verified)
+- `tasks?: SchedulerTaskSource[]` — decorated classes or instances.
+- `resolveTask?: (source) => instance` — dependency injection.
+- `logger?: SchedulerLogger`.
 
-Plugin setup with in-process driver (core imports verified from `seyfert`):
+Decorators:
+
+- `@Cron(expression, { id?, runImmediately?, data? })`.
+- `@Interval(duration, { id?, runImmediately?, data? })`.
+
+Persistent decorated tasks require an explicit non-empty `id`. Method-name defaults are accepted
+only by the memory driver.
+
+## Plugin setup
 
 ```ts
 import { Client, definePlugins } from 'seyfert';
 import { Interval, memory, scheduler } from '@slipher/scheduler';
 
 class MaintenanceTasks {
-	@Interval('5m', { id: 'heartbeat' })
-	heartbeat() {
-		// run work
-	}
+  @Interval('5m', { id: 'heartbeat', runImmediately: true })
+  heartbeat() {
+    // work
+  }
 }
 
-const schedulerPlugin = scheduler({ driver: memory(), tasks: [MaintenanceTasks] });
+const schedulerPlugin = scheduler({
+  driver: memory(),
+  tasks: [MaintenanceTasks],
+});
 const plugins = definePlugins(schedulerPlugin);
 
 declare module 'seyfert' {
-	interface SeyfertRegistry {
-		plugins: typeof plugins;
-	}
+  interface SeyfertRegistry {
+    plugins: typeof plugins;
+  }
 }
 
-export const client = new Client({ plugins });
-```
-
-Decorated tasks; `runImmediately` runs once at setup then on schedule:
-
-```ts
-import { Cron, Interval, type ScheduledTask } from '@slipher/scheduler';
-
-class Tasks {
-	@Cron('0 9 * * *', { id: 'morning-report' })
-	report(task: ScheduledTask) {
-		return task.id;
-	}
-
-	@Interval('1h', { id: 'heartbeat', runImmediately: true })
-	heartbeat() {}
-}
-```
-
-Scheduling imperatively from a command (`ctx.scheduler` is the same registry):
-
-```ts
-import { Command, Declare, type CommandContext } from 'seyfert';
-
-@Declare({ name: 'refresh-cache', description: 'Schedule a cache refresh' })
-export default class RefreshCacheCommand extends Command {
-	async run(ctx: CommandContext) {
-		ctx.scheduler.interval('refresh-cache', '30s', async task => {
-			void task.id;
-		});
-		// write(body) returns void in v5 unless you pass the response flag
-		await ctx.write({ content: 'Cache refresh scheduled.' });
-	}
-}
-```
-
-Capturing the registry for non-client code (avoids a circular import on `client`):
-
-```ts
-// index.ts
-const schedulerPlugin = scheduler({ driver: memory(), tasks: [MaintenanceTasks] });
-const plugins = definePlugins(schedulerPlugin);
 export const registry = schedulerPlugin.registry;
 export const client = new Client({ plugins });
-
-// services/reports.ts — no client, no ctx needed
-import { registry } from '../index';
-export const pauseReports = () => registry.pause('morning-report');
 ```
 
-Persistent driver + graceful shutdown:
+With the plugin, `setup` prepares driver resources and the `plugins:ready` hook activates tasks
+only after every plugin completed setup. Teardown closes the driver.
 
-```ts
-import { Client, definePlugins } from 'seyfert';
-import { persistent, scheduler } from '@slipher/scheduler';
-
-const schedulerPlugin = scheduler({
-	driver: persistent({
-		connection: { host: '127.0.0.1', port: 6379 },
-		queueName: 'scheduler',
-		prefix: 'slipher',
-		purgeOrphansOnStartup: true, // delete Redis schedules with no matching task on start
-	}),
-	tasks: [MaintenanceTasks],
-});
-const plugins = definePlugins(schedulerPlugin);
-const client = new Client({ plugins });
-await client.start(); // opens Redis/BullMQ during plugin setup
-
-process.on('SIGTERM', () => void client.close().then(() => process.exit(0)));
-```
-
-Standalone (no Seyfert plugin):
+Standalone:
 
 ```ts
 import { createScheduler, memory } from '@slipher/scheduler';
 
 const registry = createScheduler({ driver: memory() });
 registry.cron('daily-cleanup', '0 0 * * *', async () => {});
-registry.add('poller', '10s', async task => void task.runCount); // add() auto-detects kind
-await registry.setup(); // no client lifecycle, so call setup yourself
+await registry.setup();
+// ...
+await registry.close();
 ```
 
-## Recipes (new — verified core surface)
+## Registry API
 
-Scheduling reactively from an event handler (reach the registry via the `client` param):
+Define:
+
+- `cron(id, expression, runner, options?)`.
+- `interval(id, duration, runner, options?)`.
+- `add(id, durationOrCron, runner, options?)` — duration first, then cron fallback.
+- `register(tasks, resolveTask?)`.
+
+Read:
+
+- `get(id)`, `list()`, `snapshot()`.
+
+Mutate — all asynchronous:
+
+- `pause(id)`, `resume(id)`, `remove(id)`.
+- Deprecated alias `start(id)` delegates to `resume(id)`.
+- `removeOrphan(id)` removes a driver schedule that is no longer registered in this registry.
+
+Lifecycle:
+
+- `prepare(client?)`, `activate(client?)`, `setup(client?)`, `close()`.
+
+Events:
+
+- `on(event, listener)`, `once(event, listener)`, `off(event, listener)`.
+
+Always await mutations:
 
 ```ts
-// events/guildCreate.ts
-import { createEvent } from 'seyfert';
+if (action === 'pause') await ctx.scheduler.pause(id);
+else if (action === 'resume') await ctx.scheduler.resume(id);
+else if (action === 'remove') await ctx.scheduler.remove(id);
 
-export default createEvent({
-	data: { name: 'guildCreate' },
-	// v5: run(payload, client) — non-gateway handlers no longer receive shardId
-	run(guild, client) {
-		// run a one-off onboarding cron per guild; stable id keyed by guild id
-		client.scheduler.cron(`welcome-digest:${guild.id}`, '0 12 * * MON', async () => {
-			await client.messages.write(guild.systemChannelId!, {
-				content: 'Weekly digest is ready.',
-			});
-		});
-	},
+await ctx.write({ content: `Done: ${action} ${id}.` });
+```
+
+## Persistent schedules
+
+```ts
+import { persistent, scheduler } from '@slipher/scheduler';
+
+const schedulerPlugin = scheduler({
+  driver: persistent({
+    connection: { host: '127.0.0.1', port: 6379 },
+    queueName: 'scheduler',
+    prefix: 'slipher',
+    purgeOrphansOnStartup: false,
+    immediateRunDeduplicationMs: 60_000,
+  }),
+  tasks: [MaintenanceTasks],
 });
 ```
 
-Admin command that lists / pauses / resumes / removes tasks at runtime:
+Current persistent options:
+
+- `connection`, `queueName`, `prefix`.
+- `purgeOrphansOnStartup`.
+- `immediateRunDeduplicationMs` — positive integer; defaults to 60 seconds.
+- `logger`.
+- Optional injected `bullmq` module.
+
+Install `bullmq@^5.23.0` only when using persistent scheduling.
+
+Removing a decorated task from source leaves its Redis scheduler behind. Choose one:
 
 ```ts
-import {
-	Command,
-	Declare,
-	Options,
-	createStringOption,
-	type CommandContext,
-} from 'seyfert';
-
-const options = {
-	// option record keys MUST be lowercase in v5 (compile-time enforced)
-	action: createStringOption({
-		description: 'What to do',
-		required: true,
-		choices: [
-			{ name: 'list', value: 'list' },
-			{ name: 'pause', value: 'pause' },
-			{ name: 'resume', value: 'resume' },
-			{ name: 'remove', value: 'remove' },
-		] as const, // choices is readonly in v5 — use `as const`
-	}),
-	id: createStringOption({ description: 'Task id', required: false }),
-};
-
-@Declare({ name: 'tasks', description: 'Manage scheduled tasks' })
-@Options(options)
-export default class TasksCommand extends Command {
-	async run(ctx: CommandContext<typeof options>) {
-		const { action, id } = ctx.options;
-		const registry = ctx.scheduler;
-
-		if (action === 'list') {
-			const ids = registry.list().map(t => t.id);
-			return ctx.write({ content: ids.length ? ids.join(', ') : 'No tasks.' });
-		}
-		if (!id) return ctx.write({ content: 'An id is required for that action.' });
-
-		if (action === 'pause') registry.pause(id);
-		else if (action === 'resume') registry.resume(id);
-		else if (action === 'remove') registry.remove(id);
-
-		await ctx.write({ content: `Done: ${action} ${id}.` });
-	}
-}
+await registry.removeOrphan('removed-task-id');
 ```
 
-Observability — feed scheduler events into metrics/logging:
+or enable `purgeOrphansOnStartup`. Do not call `remove(id)` for an orphan: `remove` requires a
+currently registered task and throws otherwise.
+
+`pause` removes the BullMQ job scheduler; `resume` re-upserts it. `runImmediately` is deduplicated
+across replicas inside the configured window.
+
+## Events
+
+Events and payloads:
+
+- `scheduled`, `started`, `paused`, `resumed`, `removed` → `{ task }`.
+- `completed` → `{ task, result }`.
+- `failed` → `{ task, error }`.
+- `error` → `{ source: 'queue' | 'queue-events' | 'worker', error }`.
 
 ```ts
-// index.ts (after building schedulerPlugin)
-const registry = schedulerPlugin.registry;
-
-// on() returns an unsubscribe fn — keep it if you ever need to detach
-const offFail = registry.on('failed', ({ task, error }) => {
-	client.logger.error(`Task ${task.id} failed`, error);
+const offFailed = registry.on('failed', ({ task, error }) => {
+  client.logger.error(`Task ${task.id} failed`, error);
 });
 
-registry.on('completed', ({ task, result }) => {
-	client.logger.debug(`Task ${task.id} ok (run #${task.runCount})`, result);
+registry.on('error', ({ source, error }) => {
+  client.logger.error(`Scheduler ${source} error`, error);
 });
 
-// later, when shutting a subsystem down: offFail();
+// later
+offFailed();
 ```
 
-Mixing decorated classes with imperative tasks (both share one registry):
+Listener failures do not alter task state or block later listeners. They are reported through the
+configured logger or a process warning.
 
-```ts
-import { Client, definePlugins } from 'seyfert';
-import { Cron, memory, scheduler } from '@slipher/scheduler';
+## Lifecycle and gotchas
 
-class CoreTasks {
-	@Cron('*/15 * * * *', { id: 'sweep' })
-	sweep() {/* every 15 min */}
-}
+- `ctx.scheduler === client.scheduler === schedulerPlugin.registry`.
+- `client.start()` prepares persistent Queue/Worker/QueueEvents, then activates work at
+  `plugins:ready`. Preparation failures reject startup before tasks activate.
+- `client.close()` runs plugin teardown and closes scheduler resources. On SIGTERM/SIGINT, also
+  disconnect gateway shards and close any non-plugin resources you own; Seyfert core `close()`
+  does not close gateway, REST, or cache.
+- `memory()` uses Croner in-process. Intervals have one-second scheduling resolution; set an
+  explicit process timezone such as `TZ=UTC` when cron timezone matters.
+- Persistent task ids are Redis scheduler ids. Renaming a method without a stable id creates an
+  orphan.
+- `ScheduledTask` exposes id/kind/expression/interval/status/runCount/timestamps/error/data and
+  `snapshot()`.
+- A torn-down registry/driver instance should not be restarted; create a fresh plugin instance
+  for a fresh client lifecycle.
 
-const schedulerPlugin = scheduler({ driver: memory(), tasks: [CoreTasks] });
-const plugins = definePlugins(schedulerPlugin);
-const client = new Client({ plugins });
+## Source anchors
 
-// add more tasks at composition time alongside the decorated ones
-schedulerPlugin.registry.interval('ping-upstream', '1m', async () => {/* ... */});
-
-await client.start();
-```
-
-## Common patterns / gotchas
-
-- `ctx.scheduler`, `client.scheduler`, and `schedulerPlugin.registry` are the SAME object — pick
-  whichever is reachable: `ctx.scheduler` in commands/components/modals, `entity.client.scheduler`
-  in events, the captured `registry` in plain modules.
-- Types only resolve after the `declare module 'seyfert' { interface SeyfertRegistry { plugins: typeof plugins } }`
-  augmentation. v5 augments `SeyfertRegistry` (NOT `UsingClient`/`RegisteredMiddlewares`); reuse the
-  same block to also register `client`, `middlewares`, `langs`.
-- Always give tasks a stable explicit `id`. With `memory()` the method name is an acceptable
-  default; with `persistent()` ids ARE the Redis scheduler ids — renaming a method without a fixed
-  `id` orphans the old Redis schedule and creates a new one.
-- Removing a task from code does NOT stop a `persistent()` schedule — call `registry.remove(id)` or
-  start with `persistent({ purgeOrphansOnStartup: true })`. `pause(id)`/`resume(id)` drop and
-  recreate the BullMQ job scheduler.
-- `memory()` intervals are 1s-resolution (sub-second values like `'500ms'` round up). Cron uses
-  Croner's runtime timezone — set `TZ` (e.g. `TZ=UTC`) explicitly if timezone matters.
-- For `persistent()`, wire `client.close()` to process signals (SIGTERM/SIGINT) so Redis/BullMQ
-  release on shutdown — `close()` fires the `client:close` plugin hook (verified, base.ts:510).
-  Install `bullmq@^5.23.0` only when you actually use `persistent()`.
-- `on(...)` returns an unsubscribe function; listener errors are isolated and reported via the
-  configured logger. With `persistent()`, `started`/`completed`/`failed` come from BullMQ
-  `QueueEvents`, so every replica sees the cluster-level outcome.
-
-## Doc vs Source Corrections
-
-None for the core integration surface. The MDX's use of `definePlugins`, the
-`declare module 'seyfert' { interface SeyfertRegistry { plugins } }` augmentation, and the
-`setup`/`teardown` lifecycle all match ./src exactly. The `@slipher/scheduler`
-package itself is not in core Seyfert, so its decorator/driver/registry signatures could not be
-diffed against source — treat them as doc-authoritative and verify against the installed package
-version. Surrounding command/event examples follow the standard v5 conventions checklist — see plugins.md.
+- `packages/scheduler/src/index.ts` — public exports.
+- `packages/scheduler/src/manager.ts` — registry and plugin lifecycle.
+- `packages/scheduler/src/types.ts` — options, events, driver/task contracts.
+- `packages/scheduler/src/drivers/{memory,persistent}.ts` — driver behavior.
+- `packages/scheduler/src/events.ts` — listener isolation.
+- Seyfert `src/client/base.ts` — `plugins:ready` and teardown order.

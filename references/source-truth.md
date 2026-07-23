@@ -7,8 +7,9 @@ This skill was built from three inputs:
 - Rendered Vercel docs at `https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/...`.
 - The raw docs MDX from `tiramisulabs/seyfert-web` branch `seyfert-v5` (`content/docs/**.mdx`) — faithful code examples, fetched per page.
 - Authoritative Seyfert source, chosen per task: the target project's installed `node_modules/seyfert`, the current HEAD of the Seyfert Git repository (`https://github.com/tiramisulabs/seyfert`) or a checkout of it when working on the framework, or Seyfert source explicitly provided by the user.
+- Authoritative official-plugin source: the installed `@slipher/*` package in the target project; when maintaining this skill, the matching `packages/*/src`, `package.json`, and tests from current `tiramisulabs/extra`.
 
-For **core** APIs, that authoritative source wins over docs. For **external** packages (`@slipher/*`, `yunaforseyfert`, lavalink, `@slipher/testing`), verify the actual installed package before using docs-only APIs.
+For **core** APIs, Seyfert source wins over docs. For official `@slipher/*` packages, the installed version wins in consumer work and current `extra` source wins when updating this skill. For other external packages (`yunaforseyfert`, lavalink clients), verify the installed package before using docs-only APIs.
 
 ## Version Scope
 
@@ -98,7 +99,7 @@ Apply these unless the *installed* version proves otherwise.
 - Gateway intent helpers preserve the misspellings `NonPrivilaged` / `OnlyPrivilaged` — match the source spelling.
 - The REST default user-agent string may still say `v4.0.0` — not a version signal.
 - `Routes` from `seyfert` are **types only** (no runtime value export); the runtime route proxy is `client.proxy` (getter at `api/api.ts:139`, `Router` in `api/Router.ts`).
-- `@slipher/testing` and official `@slipher/*` plugins are **not** in this repo — verify package availability and version in the target project.
+- `@slipher/testing` and official `@slipher/*` plugins are **not** in Seyfert core. Verify the installed package in consumer work; when updating this skill, inspect current `tiramisulabs/extra/packages/*/src`, package metadata, and tests.
 
 ## Import Policy
 
