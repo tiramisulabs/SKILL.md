@@ -2,7 +2,15 @@
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/plugins/official/index
 Coverage reference: plugins.md
-Verification status: Source-verified (core integration API) + external packages (doc-authoritative, verify version in target project)
+Verification status: Source-verified (core integration API) + official packages verified against current `tiramisulabs/extra`
+
+## Contents
+
+- [Page summary](#page-summary)
+- [Catalog](#catalog)
+- [Core plugin API](#key-apis-verified--core-integration-from-core-seyfert)
+- [Examples](#code-examples-verified)
+- [Source anchors](#source-anchors)
 
 ## Page Summary
 
@@ -11,14 +19,15 @@ This is an index/catalog page. It lists the official packages the Seyfert team m
 - **Adapters** — swap a piece of infrastructure (cache, HTTP server, REST, gateway); passed to their own client options, NOT the `plugins` array.
 - **Utilities** — helpers you import and call directly; no plugin lifecycle.
 
-A plugin can use adapters and utilities internally — they only become "installed" when you pass a plugin object to the `plugins` option. None of these packages live in core Seyfert, so their per-package APIs are doc-authoritative and must be version-verified in the consuming project. What IS in core Seyfert (and fully verified below) is the integration shape: how a plugin object is authored (`createPlugin`/`createPluginFactory`) and passed to the client (`definePlugins`).
+A plugin can use adapters and utilities internally — they only become "installed" when you pass a plugin object to the `plugins` option. None of these packages live in core Seyfert. In consumer work, verify the installed version. When maintaining this skill, verify official packages against current `tiramisulabs/extra/packages/*/src`, metadata, and tests. Core Seyfert remains authoritative for the integration shape.
 
-## Catalog (from MDX — external packages, verify versions in target project)
+## Catalog
 
 Plugins (installed via `new Client({ plugins })`, each has its own guide):
 - `@slipher/cooldown` — per-command rate limits by user, guild, channel, or globally.
 - `@slipher/scheduler` — cron and interval jobs managed from the Seyfert lifecycle.
 - `@slipher/logger` — structured, request-aware logging with pluggable backends.
+- `@slipher/opentelemetry` — automatic traces and duration metrics for interactions, events, REST, and cache.
 - `@slipher/queues` — background job queues with producers and processors.
 - `yunaforseyfert` — advanced prefix/text command parser: named options, dynamic prefixes, watchers. (Guide: `/docs/plugins/official/yuna`.) `pnpm add yunaforseyfert`
 
@@ -34,7 +43,7 @@ Utilities (import and call directly):
 - `@slipher/testing` — test fixtures/helpers for Seyfert apps. `pnpm add -D @slipher/testing`
 - `@slipher/chartjs` — render Chart.js charts to images for attachments. `pnpm add @slipher/chartjs`
 
-Note: package names/scope are doc-authoritative; this index is the only place they appear. Always confirm the installed version and exact export surface against the package's own typings in the consuming project. The MDX page itself contains no runnable code — it points authors at `/docs/plugins/building/creating-plugins` to write their own.
+Always confirm the installed version and exact export surface against the package's own typings in a consuming project. Use each package guide for its current contract.
 
 ## Key APIs (verified — core integration, from core Seyfert)
 
@@ -142,18 +151,18 @@ function build(opts: MetricsOptions) {
 ### 4. Composing official packages with your own
 ```ts
 import { Client, definePlugins } from 'seyfert';
-import { cooldown } from '@slipher/cooldown';   // external — verify exact export/signature
-import { scheduler } from '@slipher/scheduler'; // external — verify exact export/signature
+import { cooldown } from '@slipher/cooldown';
+import { memory, scheduler } from '@slipher/scheduler';
 
 const client = new Client({
   plugins: definePlugins(
-    cooldown({ defaultCooldown: { type: 'user', interval: 5_000, uses: 1 } }),
-    scheduler(),
+    cooldown({ middleware: true }),
+    scheduler({ driver: memory() }),
     economy, // your own from example 2
   ),
 });
 ```
-External factory names/options are doc-authoritative — confirm each against the installed package's typings.
+The installed package version remains authoritative in consumer projects.
 
 ### 5. Adapter (NOT a plugin) — passed to its own option
 ```ts
@@ -198,7 +207,7 @@ const presencePlugin = createPlugin({
 - Catalog grouping fixed to match current MDX (ref seyfert-v5): `yunaforseyfert` is listed under **Plugins** (with a `/yuna` guide link), not Utilities. Utilities are now `@slipher/webhooks`, `@slipher/watcher`, `@slipher/testing`, `@slipher/chartjs`.
 - All core integration APIs and line anchors re-verified against `./src` on the authoritative Seyfert source — no stale/v4 signatures found. `createPlugin` runtime is `return plugin` (240-265); `createPluginFactory` wraps throws via `wrapPluginError` (267-281); `definePlugins` accepts spread-or-array (283-289).
 - `SeyfertRegistry` starts as empty `interface SeyfertRegistry {}` (types.ts:32) and is the single augmentation point in v5 (replaces v4 `UsingClient`/`RegisteredMiddlewares`/`DefaultLocale`, which are now derived).
-- MDX descriptions of the `@slipher` packages cannot be verified against core Seyfert (none are vendored); treated as doc-authoritative — verify versions/exports in the consuming project.
+- Official `@slipher` package contracts are verified against current `tiramisulabs/extra`; core Seyfert cannot verify their package-specific exports because none are vendored there.
 
 ## Source Anchors
 

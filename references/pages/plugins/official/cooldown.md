@@ -4,7 +4,15 @@ Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/
 
 Coverage reference: plugins.md
 
-Verification status: Source-verified (core) + external package
+Verification status: Source-verified against current `tiramisulabs/extra/packages/cooldown` + Seyfert core
+
+## Contents
+
+- [Page summary](#page-summary)
+- [Key APIs](#key-apis-verified)
+- [Code examples](#code-examples-verified)
+- [Recipes and gotchas](#recipes--common-patterns)
+- [Source anchors](#source-anchors)
 
 ## Page Summary
 
@@ -13,9 +21,8 @@ cooldowns scoped per user, guild, channel, or globally. You declare a cooldown w
 `@Cooldown` decorator (or its scope shortcuts), and either let the bundled `cooldown`
 middleware gate commands automatically or drive the `CooldownManager` (`client.cooldown` /
 `ctx.cooldown`) directly. Storage is backed by the client cache adapter, with an optional
-atomic Redis-style `eval` fast path for `consume`. Requires Seyfert v5; keeps `seyfert` as a
-peer dependency. Verify the package version/API in the target project — the package API below
-is authoritative from the MDX, not from Seyfert source.
+atomic Redis-style `eval` fast path for `consume`. Requires Seyfert v5 and keeps `seyfert` as a
+peer dependency. Verify the installed version in consumer projects.
 
 ## Key APIs (verified)
 
@@ -32,7 +39,7 @@ CORE seyfert surfaces the plugin plugs into (all verified in ./src, all importab
   plugin-contributed ones (`RegisteredPluginMiddlewares`). `src/commands/decorators.ts:188`,
   `:14-20`.
 
-EXTERNAL `@slipher/cooldown` API (doc-authoritative — verify version in target project):
+EXTERNAL `@slipher/cooldown` API (verified against current `extra` source):
 
 - `cooldown(options?)` factory → a Seyfert plugin. Options: `{ middleware?: boolean | { global?: boolean; name?: string; message?: string | ((result, ctx) => string) } }`.
 - `Cooldown` decorator + scope shortcuts:
@@ -44,9 +51,10 @@ EXTERNAL `@slipher/cooldown` API (doc-authoritative — verify version in target
   - `Cooldown.custom(resolver: (ctx) => string | undefined, interval, { uses?, group? }?)`
 - `interface CooldownProps { type?: 'user'|'guild'|'channel'|'global'|((ctx: AnyContext) => string | undefined); interval: number; uses?: number; group?: string }` — `type` defaults to `'user'`, `uses` defaults to `1`.
 - `CooldownManager` exposed as `client.cooldown` and `ctx.cooldown`:
-  - `consume()` (zero-arg, context-scoped) / `consume({ name, target, guildId?, cost? })`
-  - `check({ name, target, guildId? })` — preview, no mutation
-  - `reset({ name, target, guildId? })` — deletes bucket, returns `false` if no cooldown
+  - `consume()` / `consume({ cost? })` in a live handler; explicit `consume({ name, target, guildId?, cost? })`
+  - `check()` / `check({ cost? })` in a live handler; explicit `check({ name, target, guildId?, cost? })`
+  - `reset()` in a live handler; explicit `reset({ name, target, guildId? })`
+  - implicit forms throw outside a live cooldown scope
 - `type CooldownResult` — discriminated union on `allowed`; fields `remainingMs`, `retryAfter: Date`, `limit`, `remainingUses`, `key`. `check`/`consume` return `undefined` when the command has no cooldown.
 - `type CooldownMiddlewares<Name extends string>` — helper to register middleware type by name.
 - `AtomicCooldownAdapter` marker interface: `{ supportsAtomicCooldowns: true; eval(script, keys, args) }`.
@@ -129,7 +137,7 @@ if (result && !result.allowed) {
 }
 ```
 
-Manager use outside a handler (explicit form — zero-arg form THROWS outside a Seyfert handler):
+Manager use outside a handler (explicit form — implicit forms throw outside a Seyfert handler):
 
 ```ts
 await client.cooldown?.check({ name: 'ping', target: userId, guildId });
@@ -240,8 +248,8 @@ export default class RenderCommand extends Command {}
 ```
 
 Gotchas (all verified against the MDX + the core surfaces below):
-- Zero-arg `consume()`/`check()` ONLY work inside a live Seyfert handler — they throw outside one.
-  In jobs/tests/cross-user admin actions use the explicit `{ name, target, guildId?, cost? }` form.
+- Implicit `consume(...)`/`check(...)` forms ONLY work inside a live Seyfert handler — they throw outside one.
+  The same applies to `reset(...)`. In jobs/tests/cross-user admin actions use the explicit form.
 - `check`/`consume` return `undefined` when the command has no cooldown — always null-check before
   reading `.allowed`. `client.cooldown` is also optional (`?.`) until the plugin is installed.
 - `cost` greater than the bucket `limit` throws `RangeError` — it is a programmer error, not a denial.
@@ -256,9 +264,8 @@ Gotchas (all verified against the MDX + the core surfaces below):
 
 - None for CORE APIs: `definePlugins`, `createPlugin`, `SeyfertRegistry` augmentation, and the
   `Middlewares(['cooldown'])` decorator all match the MDX against ./src.
-- The entire `@slipher/cooldown` surface (decorators, `CooldownManager`, `CooldownResult`,
-  `CooldownMiddlewares`, atomic adapter) is EXTERNAL and cannot be verified against
-  core Seyfert — treat the MDX as authoritative and verify the installed package version.
+- The package-specific surface is verified against current `tiramisulabs/extra/packages/cooldown`.
+  In a consumer project, the installed package remains authoritative.
 
 ## Source Anchors
 
@@ -272,4 +279,6 @@ Gotchas (all verified against the MDX + the core surfaces below):
 - For `guild`/`channel` scopes, DMs fall back to `author.id`; a custom resolver returning
   `undefined` skips the cooldown for that invocation. Subcommands use
   `subcommand.cooldown ?? parent.cooldown`.
-- Shared `group` buckets use key `${group ?? resolvedCommandName}:${typeLabel}:${target}`.
+- Shared `group` buckets use an encoded namespace and target:
+  `${encodeURIComponent(group ?? resolvedCommandName)}:${typeLabel}:${encodeURIComponent(target)}`.
+  Global buckets use the fixed suffix `:global:global`.

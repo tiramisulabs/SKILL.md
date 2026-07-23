@@ -86,7 +86,7 @@ export const economyPlugin = createPluginFactory({
 
 `register(api)` (sync, at construction) → `client`/`ctx` install → `setup(client, api?)` (async, during `client.start()`) → `teardown(client, api?)` (async, during `client.close()`, REVERSE resolved order). Status (`PluginLifecycleStatus`): `registered → setting-up → ready` (or `failed`); teardown `closing → closed` (or `failed`).
 
-Startup order (`src/client/base.ts`): construction resolves/validates/registers/merges/binds → `client.start()` runs setup → disk commands load → plugin commands load after → `commands:afterLoad` → disk components → plugin components+modals → `components:afterLoad` → events load → gateway starts.
+Startup order (`src/client/base.ts`): construction resolves/validates/registers/merges/binds → `client.start()` runs setup → `plugins:setupComplete` → `plugins:ready` → cache adapter start → langs → disk commands → plugin commands → `commands:afterLoad` → disk components → plugin components+modals → `components:afterLoad`. Gateway clients then load events and connect. `plugins:ready` therefore runs before cache startup and file-loaded commands/components.
 
 **Setup failures roll back:** if one plugin's `setup` throws, already-completed plugins are torn down in reverse and their shared values disposed (`plugins.ts:699-715`); the failure surfaces as `SeyfertPluginError` or — if cleanup also fails — `SeyfertPluginAggregateError`.
 
@@ -345,11 +345,11 @@ for (const d of client.plugins.diagnostics) {
 
 Errors (`errors.ts`, both root-exported): `SeyfertPluginError` (fields `plugin`, `instanceId?`, `phase`, `index`, `cause`; default code `PLUGIN_FAILED`). `SeyfertPluginAggregateError` (`.errors: unknown[]`) thrown when setup+cleanup both fail, or reverse teardown collects multiple errors. When wrapping `client.start()`/`client.close()`, catch BOTH with `instanceof` (checking `error.name` misses the aggregate case).
 
-## Official plugins (EXTERNAL — `@slipher/*`, doc-authoritative, VERSION-VERIFY)
+## Official plugins (EXTERNAL — `@slipher/*`, source-verify)
 
-None vendored in core Seyfert. Confirm package name/version/exports against installed typings. Adapters (cache/HTTP/REST/gateway) are NOT plugins — they go to their own client options, not `plugins`.
+None are vendored in core Seyfert. In consumer work, confirm the installed version and exports. When maintaining this skill, verify current `tiramisulabs/extra/packages/*/src`, `package.json`, and tests. Adapters (cache/HTTP/REST/gateway) are NOT plugins — they go to their own client options, not `plugins`.
 
-- `@slipher/cooldown` — `cooldown({ middleware?: true | { global?, name?, message? } })`. Decorators `@Cooldown.user|guild|channel|global|custom(interval, { uses?, group? }?)` or `@Cooldown({ type, interval, uses?, group? })`. Manager on `client.cooldown`/`ctx.cooldown`: zero-arg `consume()`/`check()` (in-handler only; throw outside) or explicit `{ name, target, guildId?, cost? }`; `reset(...)`. `check`/`consume` return `undefined` when the command has no cooldown. If `middleware` is an object, the name isn't inferred — augment `SeyfertRegistry.middlewares` with `CooldownMiddlewares<'cooldown'>`.
+- `@slipher/cooldown` — `cooldown({ middleware?: true | { global?, name?, message? } })`. Decorators `@Cooldown.user|guild|channel|global(interval, { uses?, group? }?)`, `@Cooldown.custom(resolver, interval, options?)`, or `@Cooldown({ type, interval, uses?, group? })`. Manager on `client.cooldown`/`ctx.cooldown`: implicit `check`/`consume`/`reset` inside a handler, or explicit `{ name, target, guildId?, cost? }` (`reset` has no `cost`). `check`/`consume` return `undefined` and `reset` returns `false` when no command cooldown resolves. If `middleware` is an object, augment `SeyfertRegistry.middlewares` with `CooldownMiddlewares<'name'>`.
 
 ```ts
 import { cooldown } from '@slipher/cooldown';
@@ -358,9 +358,10 @@ const plugins = definePlugins(cooldown({ middleware: true }));
 // if (r && !r.allowed) return ctx.write({ content: `Retry ${Formatter.timestamp(r.retryAfter)}` });
 ```
 
-- `@slipher/scheduler` — `scheduler({ driver: memory() | persistent({...}), tasks: [...] })`; exposes `.registry` (same object as `ctx.scheduler`/`client.scheduler`). `@Cron(expr, { id })`, `@Interval(duration, { id, runImmediately? })`; imperative `registry.cron/interval/add/pause/resume/remove/list/on`. Always give a stable `id`. Persistent uses BullMQ/Redis; wire `client.close()` to SIGTERM/SIGINT.
-- `@slipher/logger` — request-scoped `ctx.logger`; `.add(...)` enriches a wide event, level methods emit immediately; `useLogger()`. Sinks: console/Pino/event-log. Redaction is sink-level.
-- `@slipher/queues` — `queues({ driver, processors: [...] })`; augment `RegisteredQueues`. `@Processor`+`@Process`(+`@OnWorkerEvent`/`@OnQueueEvent`); produce via `ctx.queues.get(name).add(...)`.
+- `@slipher/logger` — `logger({ renderer?, transports?, context?, ... })`; request-scoped `ctx.logger`, `useLogger(owner?)`, and `withLoggerScope(...)`. `.add(...)` enriches one wide event; level methods emit immediately. Outside an interaction/logger scope, nothing auto-emits that event: retain it and call `.emit()`, or wrap the work in `withLoggerScope`. Adapters are `prettyRenderer`, `silentRenderer`, `pinoAdapter`, `evlogRenderer`, and `evlogTransport`. Redaction belongs to the sink.
+- `@slipher/opentelemetry` — `opentelemetry({ serviceName?, instrument?, checkIfShouldTrace?, cache?, ...NodeSDKOptions })`; automatic interaction/event/REST/cache traces and duration metrics. Exposes `client.trace`/`ctx.trace` plus module helpers (`record`, `startActiveSpan`, `startSpan`, `getCurrentSpan`, `getTracer`, `getMeter`, `setAttributes`). Configure an exporter/processor to send telemetry; exporters are not bundled. A torn-down plugin instance is terminal.
+- `@slipher/queues` — `queues({ driver, processors?, queueDefaults?, resolve? })`; augment `RegisteredQueues`. `@Processor` + exactly one `@Process`; `resolve` runs eagerly while `queues(...)` constructs its registry, before `client.start()` and often before the client exists. `@OnWorkerEvent` is process-local, while `@OnQueueEvent` receives queue-global events whose `job` may be `undefined` under BullMQ. Produce via `ctx.queues` in handlers or `queuesPlugin.registry` in composition/background code. Persistent rejects function-form `retryDelay`.
+- `@slipher/scheduler` — `scheduler({ driver: memory() | persistent({...}), tasks? })`; exposes `.registry` (same object as `ctx.scheduler`/`client.scheduler`). `@Cron`/`@Interval`; imperative `cron`/`interval`/`add`/`pause`/`resume`/`remove`/`removeOrphan`/`list`/`on`. Await mutations. Persistent requires stable explicit decorator ids and uses BullMQ/Redis. On SIGTERM/SIGINT, disconnect gateway shards and other owned resources as well as awaiting `client.close()`; core `close()` only tears plugins down.
 - `@slipher/chartjs` — utility, not a client plugin: `NapiChartjsCanvas({...})` + `renderToBuffer(config)` → attachment buffer.
 
 Other official: adapters `@slipher/redis-adapter`, `@slipher/uws-adapter`, `@slipher/generic-adapter`, `@slipher/proxy`; utilities `yunaforseyfert`, `@slipher/webhooks`, `@slipher/watcher`, `@slipher/testing`.

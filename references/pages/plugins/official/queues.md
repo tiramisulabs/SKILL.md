@@ -1,49 +1,59 @@
-# Queues (@slipher/queues)
+# Queues (`@slipher/queues`)
 
 Original source URL: https://seyfert-web-git-seyfert-v5-tiramisulabs.vercel.app/docs/plugins/official/queues
-Coverage reference: plugins.md
-Verification status: Source-verified (core integration) + EXTERNAL package (queue API doc-authoritative — verify version in target project)
 
-## Page Summary
+Coverage reference: `plugins.md`
 
-`@slipher/queues` is an EXTERNAL package (NOT in core Seyfert) that adds typed background job queues to a Seyfert v5 bot. Producers enqueue jobs from anywhere (`ctx.queues.get(name).add(...)`); processors are decorated classes (`@Processor` + exactly one `@Process` handler, plus `@OnQueueEvent` / `@OnWorkerEvent` listeners). A driver decides where jobs run: `memory()` in-process, or `persistent()` on BullMQ/Redis — same API either way. The package plugs into Seyfert through the standard plugin surface (`definePlugins`, `SeyfertRegistry`, client/ctx extension, `client.close()` teardown), all of which are verified against ./src; the queue API itself is doc-authoritative — verify the version in the target project.
+Verification status: Source-verified against current `tiramisulabs/extra/packages/queues` + Seyfert core
 
-## Key APIs
+## Contents
 
-### External (`@slipher/queues`, doc-authoritative — verify version in target project)
-- `queues({ driver, processors, ... })` — builds the plugin; exposes `.registry`.
-- Drivers: `memory({ attempts, retryDelay, concurrency, priority, delay, reportListenerError })`, `persistent({ connection, prefix, defaultJobOptions })` (needs `bullmq` installed).
-- Decorators: `@Processor(name)`, `@Process()` (one per class), `@OnQueueEvent(event)`, `@OnWorkerEvent(event)`.
-- Types: `QueueRegistration<Payload, Result>`, `QueueJobOf<'name'>`, interface `RegisteredQueues` (declaration-merge target).
-- Producer: `registry.get(name).add(...)` / `ctx.queues.get(name).add(...)`.
-  - Named-job queue: `add(jobName, payload, options?)`.
-  - Simple queue (no `job` discriminant): `add(data, options?)`.
-- Job object: `job.name`, `job.data`, `job.snapshot()`.
-- Lifecycle events (memory): `added`, `active`, `completed`, `failed`, `retrying`, `idle`.
-- Listener payloads: `{ job }`, `{ job, result }`, `{ job, error }`, `{ job, error, delay }`, `{}` (idle). Direct queue instances also support `.on()` / `.once()`.
-- Errors: `InvalidDurationError` (exported for `instanceof`), warning code `SLIPHER_QUEUE_RETRY_DELAY_NO_RETRIES`, and a descriptive `TypeError` on ambiguous `add('name', objLookingLikeOptions)`.
+- [Contract](#contract)
+- [Typed setup](#typed-setup)
+- [Producing and controlling jobs](#producing-and-controlling-jobs)
+- [Events](#events)
+- [Drivers](#drivers)
+- [Dependency resolution](#dependency-resolution)
+- [Lifecycle and gotchas](#lifecycle-and-gotchas)
+- [Source anchors](#source-anchors)
 
-### Core seyfert (verified in ./src — all importable from `'seyfert'`)
-- `definePlugins(...plugins)` — `src/client/plugins.ts:283-289`. Accepts a spread OR a single array; returns the tuple as-is (identity helper for typing).
-- `createPlugin(...)` — `src/client/plugins.ts:240` / `createPluginFactory(...)` — `:267` (the integration shape `@slipher/queues` builds on: `client` map extends the Client, `ctx` map extends command context).
-- `interface SeyfertRegistry {}` — `src/client/plugins/types.ts:32` (declaration-merge `plugins: typeof plugins` to register the plugin tuple type; consumed by `RegisteredPlugins`, `types.ts:286`).
-- `new Client({ plugins })` — `plugins` is a real BaseClient option; resolved into `client.plugins` (`src/client/base.ts:195,272`).
-- `client.close()` — `src/client/base.ts:502` (async; runs the `client:close` plugin hook, which is how `@slipher/queues` tears queues down). NOTE: `close()` does NOT close gateway/REST/cache (`base.ts:500`) — it only runs plugin teardown.
-- Barrel: plugin API re-exported via `src/client/index.ts:13` (`export * from './plugins'`) → `src/index.ts:1` (`export * from './client'`), so `definePlugins`/`SeyfertRegistry`/`createPlugin` are all root `'seyfert'` imports — no deep import needed.
+## Contract
 
-## Code Examples (verified)
+`queues(options)` installs one `QueuesRegistry` as `client.queues`, `ctx.queues`, and
+`queuesPlugin.registry`.
 
-### Setup — plugin install (core imports confirmed against src; queue API per docs)
+Current plugin options:
+
+- `driver: QueueDriver` — `memory()` or `persistent()`.
+- `queueDefaults?: QueueOptions`.
+- `processors?: readonly QueueConstructor[]`.
+- `resolve?: (target) => instance` — dependency injection for processor classes.
+
+Standalone `createQueues(options)` returns a registry without a Seyfert plugin; call
+`registry.setup()` and `registry.close()` yourself.
+
+Decorators:
+
+- `@Processor(name, queueOptions?)`.
+- Exactly one `@Process()` method per processor class; it receives the full `QueueJob`.
+- `@OnWorkerEvent(event)` — process-local worker events.
+- `@OnQueueEvent(event)` / `@QueueEvent(event)` — queue-global events.
+
+## Typed setup
 
 ```ts
 import { Client, definePlugins } from 'seyfert';
 import {
-  OnQueueEvent, OnWorkerEvent, Process, Processor,
-  type QueueJobOf, type QueueRegistration,
-  memory, queues,
+  memory,
+  OnQueueEvent,
+  OnWorkerEvent,
+  Process,
+  Processor,
+  queues,
+  type QueueJobOf,
+  type QueueRegistration,
 } from '@slipher/queues';
 
-// Discriminated union: one processor, several named jobs, each typed.
 type AudioJob =
   | { job: 'transcode'; fileId: string; format: 'mp3' | 'ogg' }
   | { job: 'concatenate'; fileIds: string[] };
@@ -59,17 +69,25 @@ class AudioProcessor {
   @Process()
   async handle(job: QueueJobOf<'audio'>) {
     switch (job.name) {
-      case 'transcode': return transcode(job.data.fileId, job.data.format);
-      case 'concatenate': return concatenate(job.data.fileIds);
+      case 'transcode':
+        return transcode(job.data.fileId, job.data.format);
+      case 'concatenate':
+        return concatenate(job.data.fileIds);
     }
   }
 
   @OnWorkerEvent('active')
-  onActive({ job }: { job: QueueJobOf<'audio'> }) { job.snapshot(); }
+  onActive({ job }: { job: QueueJobOf<'audio'> }) {
+    void job.snapshot();
+  }
 
   @OnQueueEvent('completed')
-  onCompleted({ job, result }: { job: QueueJobOf<'audio'>; result: string }) {
-    job.snapshot(); void result;
+  onCompleted({ jobId, job, result }: {
+    jobId: string;
+    job: QueueJobOf<'audio'> | undefined;
+    result: string;
+  }) {
+    auditCompletion(jobId, result, job?.snapshot());
   }
 }
 
@@ -80,181 +98,117 @@ const queuesPlugin = queues({
 const plugins = definePlugins(queuesPlugin);
 
 declare module 'seyfert' {
-  interface SeyfertRegistry { plugins: typeof plugins }
+  interface SeyfertRegistry {
+    plugins: typeof plugins;
+  }
 }
 
 export const registry = queuesPlugin.registry;
 export const client = new Client({ plugins });
 ```
 
-### Producing jobs
+## Producing and controlling jobs
+
+Named jobs:
 
 ```ts
-// named-job queue
-await ctx.queues.get('audio').add('concatenate', { fileIds: ['a', 'b'] });
 await ctx.queues.get('audio').add(
-  'transcode', { fileId: 'file-2', format: 'ogg' }, { attempts: 5, retryDelay: '10s' },
+  'transcode',
+  { fileId: 'file-2', format: 'ogg' },
+  { attempts: 5, retryDelay: '10s', priority: 1 },
 );
+```
 
-// simple queue (no `job` discriminant): add(data, options)
+Simple queue:
+
+```ts
 declare module '@slipher/queues' {
-  interface RegisteredQueues { welcome: QueueRegistration<{ userId: string }> }
-}
-await ctx.queues.get('welcome').add({ userId: ctx.author.id });
-```
-
-### Enqueue from a slash command (full command file)
-
-`ctx.queues` is the plugin-extended context — typed because `SeyfertRegistry.plugins` was augmented. `write`/`editOrReply` return `void` in v5 unless you pass the response flag `true`.
-
-```ts
-import { Command, Declare, Options, createStringOption } from 'seyfert';
-
-const options = {
-  // v5: option keys MUST be lowercase (compile-time check)
-  fileid: createStringOption({ description: 'File to transcode', required: true }),
-} as const;
-
-@Declare({ name: 'transcode', description: 'Queue an audio transcode' })
-@Options(options)
-export default class TranscodeCommand extends Command {
-  async run(ctx: CommandContext<typeof options>) {
-    await ctx.queues.get('audio').add('transcode', {
-      fileId: ctx.options.fileid,
-      format: 'mp3',
-    });
-    // deferReply earlier if the enqueue or downstream UX is slow
-    await ctx.write({ content: 'Queued. I will ping you when it finishes.' });
+  interface RegisteredQueues {
+    welcome: QueueRegistration<{ userId: string }, void>;
   }
 }
+
+await ctx.queues.get('welcome').add({ userId: ctx.author.id }, { delay: '5s' });
 ```
 
-### Enqueue from an event (use `entity.client.queues`)
+Each queue supports `add`, `process`, `start`, `pause`, `clear`, `close`, `counts`, `getJob`,
+`on`, `once`, and `off`. Registry `get(name, options?)` returns the existing queue or creates it.
+Reusing a queue name with different options throws.
 
-Inside an event handler there is no `ctx`; reach the registry through the client carried on the entity. Custom event `run` is `Awaitable<unknown>` in v5; gateway handlers no longer get a trailing `shardId` for custom events.
+`priority` and `delay` are `JobOptions`, not `memory()`/`QueueOptions`.
 
-```ts
-import { createEvent } from 'seyfert';
+## Events
 
-export default createEvent({
-  data: { name: 'guildMemberAdd' },
-  run(member) {
-    // member.client === the running Client, extended with .queues by the plugin
-    return member.client.queues.get('welcome').add({ userId: member.id });
-  },
-});
-```
+Queue/driver-neutral event payloads are intentionally different:
 
-### Notify the user when a job completes (carry routing data in the payload)
+- Queue-global: `added`, `completed`, `failed`. Payloads include `jobId`; `job` may be
+  `undefined` when an event originated from BullMQ `QueueEvents`.
+- Worker-local: `active`, `completed`, `failed`, `retrying`, `idle`. Worker payloads carry a
+  concrete `job`.
+- Direct queue `.on()` also exposes the combined queue event map used by that driver.
 
-The processor only gets `job.data`, so stash whatever you need to reply (channel id, user id) inside the payload. Use `client.queues` from the processor's listeners to reach REST — but capture `registry`/`client` carefully to avoid circular imports (see gotchas).
+Use `@OnWorkerEvent` when the handler must inspect the concrete job that ran locally. Use
+`@OnQueueEvent` for cluster-visible outcomes and code defensively around `job === undefined`.
+Listener failures are isolated and routed to `reportListenerError`.
 
-```ts
-type NotifyJob = {
-  job: 'render';
-  prompt: string;
-  channelId: string;
-  userId: string;
-};
+## Drivers
 
-declare module '@slipher/queues' {
-  interface RegisteredQueues { render: QueueRegistration<NotifyJob, string> }
-}
+`memory(options?: QueueOptions)` supports:
 
-@Processor('render')
-class RenderProcessor {
-  constructor(private readonly client: UsingClient) {}
+- `concurrency`, `attempts`, `retryDelay`, `autostart`, `retention`.
+- Test/control hooks `now`, `idGenerator`, `reportListenerError`.
+- Function-form `retryDelay(job, error)`.
 
-  @Process()
-  async handle(job: QueueJobOf<'render'>) {
-    return render(job.data.prompt); // returns the result string (an image url, etc.)
-  }
+`persistent(options?: PersistentQueueOptions)` supports:
 
-  @OnQueueEvent('completed')
-  async onDone({ job, result }: { job: QueueJobOf<'render'>; result: string }) {
-    await this.client.messages.write(job.data.channelId, {
-      content: `<@${job.data.userId}> done: ${result}`,
-    });
-  }
+- `connection`, `prefix`, `defaultJobOptions`.
+- `queueOptions`, `queueEventsOptions`, `workerOptions`.
+- Optional injected `bullmq` module for testing/custom loading.
 
-  @OnQueueEvent('failed')
-  async onFail({ job, error }: { job: QueueJobOf<'render'>; error: Error }) {
-    await this.client.messages.write(job.data.channelId, {
-      content: `<@${job.data.userId}> render failed: ${error.message}`,
-    });
-  }
-}
-```
+Install `bullmq@^5` only when using `persistent()`. Function-form `retryDelay` is not supported
+by the persistent driver; use a duration or BullMQ backoff object.
 
-> Note: whether a `@Processor` constructor receives the client is a `@slipher/queues` convention — confirm against the installed package. If it does not inject, capture `registry`/`client` from your composition module instead.
+The persistent driver refuses to produce before setup. With the plugin, await `client.start()`
+before adding jobs. Queue/Worker/QueueEvents resources close during plugin teardown.
 
-### ctx-less producer (capture `registry`, not `client`, to dodge circular imports)
+## Dependency resolution
+
+Processors are instantiated eagerly while `queues(options)` constructs its registry, using
+`new target()` by default. This happens before plugin setup and commonly before the Seyfert client
+exists, so constructors do not receive the client automatically. Use `resolve` only with
+dependencies that already exist at composition time:
 
 ```ts
-// services/media.ts
-import { registry } from '../index';
-export function scheduleTranscode(fileId: string) {
-  return registry.get('audio').add('transcode', { fileId, format: 'mp3' });
-}
-```
-
-### Isolated listener errors
-
-A throwing listener never changes job state, retry counts, or whether later listeners run — it is routed to `reportListenerError`.
-
-```ts
-queues({
-  driver: memory({
-    reportListenerError(event, error) {
-      logger.error('queue listener failed', { event, error });
-    },
-  }),
-  processors: [AudioProcessor],
-});
-```
-
-### Persistent (BullMQ/Redis) driver + clean shutdown
-
-```ts
-import { persistent, queues } from '@slipher/queues';
-
 const queuesPlugin = queues({
-  driver: persistent({
-    connection: { host: '127.0.0.1', port: 6379 },
-    prefix: 'slipher',
-    defaultJobOptions: { removeOnComplete: true, attempts: 3 },
-  }),
+  driver: memory(),
   processors: [AudioProcessor],
-});
-
-// client.close() runs plugin teardown (verified base.ts:502). Wire it to signals.
-process.on('SIGTERM', () => {
-  void client.close().then(() => process.exit(0));
+  resolve: (target) => container.resolve(target),
 });
 ```
 
-## Common patterns / gotchas
+Alternatively keep processors constructor-free and capture a service/registry from the
+composition module. Avoid importing the exported client from modules that the composition module
+itself imports.
 
-- `ctx.queues === client.queues === queuesPlugin.registry` — one object, three entry points (command/component/modal: `ctx.queues`; event: `entity.client.queues`; service: captured `registry`).
-- ONE `@Process()` per `@Processor` class. There is NO framework per-name dispatch — `switch (job.name)` yourself for named-job queues. Typos surface through the typed producer at compile time, not as runtime "process not found".
-- Ambiguous `add`: `add('name', { delay: '5s' })` throws a descriptive `TypeError` (string payload + options vs. named job whose payload looks like options). Force it: `add('name', { delay: '5s' }, {})`, or use non-string data with `add(data, options)`.
-- `retryDelay` only applies when `attempts > 1`; otherwise you get a `SLIPHER_QUEUE_RETRY_DELAY_NO_RETRIES` warning. Bad duration strings throw `InvalidDurationError` (exported for `instanceof`).
-- Processors get only `job.data` — put routing/context (channelId, userId, locale) INTO the payload if a listener needs to reply.
-- Circular imports: processors/services loaded by `index.ts` must NOT import the exported `client`; capture `registry` at composition time instead.
-- `memory()` for single-process bots; `persistent()` when jobs must survive restarts or span workers — queue/processor code is byte-identical, only the driver changes. `persistent` needs `bullmq` installed.
-- Choose `@OnWorkerEvent` for process-local reactions (the worker that ran the job) and `@OnQueueEvent` for queue-wide/global reactions. With `memory()` both observe the same single-process queue.
+## Lifecycle and gotchas
 
-## Doc vs Source Corrections
+- `ctx.queues === client.queues === queuesPlugin.registry`.
+- `QueuesRegistry.setup()` delegates to the driver; `close()` closes the driver or every queue
+  and aggregates close failures.
+- On SIGTERM/SIGINT, await `client.close()` to tear persistent workers down, but also disconnect
+  gateway shards and close any non-plugin resources you own; Seyfert core `close()` only tears
+  plugins down.
+- `retryDelay` only matters when `attempts > 1`; otherwise the package emits
+  `SLIPHER_QUEUE_RETRY_DELAY_NO_RETRIES`.
+- Invalid duration strings throw exported `InvalidDurationError`.
+- Ambiguous `add('name', optionsShapedObject)` throws. Force a named job with
+  `add(name, data, {})`, or use non-string data for the simple form.
+- Put routing data such as `channelId`, `userId`, and locale inside the job payload.
 
-- None for core APIs. `definePlugins` (`:283`), `createPlugin` (`:240`), `createPluginFactory` (`:267`), `SeyfertRegistry` (`types.ts:32`), `new Client({ plugins })` (`base.ts:195/272`), and `client.close()` (`base.ts:502`) all match ./src exactly and resolve from the `'seyfert'` root barrel.
-- The MDX comment says jobs are "switched on the `job` field" but the handler/registration switches on `job.name` — the `job` key is the discriminant in the `RegisteredQueues` registration; `name` is the runtime field on the job object. Package convention, not a core conflict; verify against the installed `@slipher/queues` types.
-- Queue decorators/drivers/registry methods are NOT in core Seyfert; they cannot be source-verified here. Treat the queue API as doc-authoritative and confirm against the installed package version.
-- Surrounding command/event code follows the standard v5 conventions checklist — see plugins.md.
+## Source anchors
 
-## Source Anchors
-
-- `src/client/plugins/api.ts`, `registry.ts`, `shared.ts`, `order.ts`, `errors.ts` (plugin runtime: registry, shared services, ordering, error wrapping)
-
-## Agent Guidance
-
-- Use when a bot needs deferred/background work (media transcode, welcome flows, scheduled side effects, rendering). Reach for `memory()` for single-process bots; switch to `persistent()` only when jobs must survive restarts or span workers — the queue/processor code is identical.
+- `packages/queues/src/index.ts` — registry, plugin, decorators, processor instantiation.
+- `packages/queues/src/core.ts` — public queue/driver/job/event contracts.
+- `packages/queues/src/memory.ts` — in-process behavior and retries.
+- `packages/queues/src/persistent.ts` — BullMQ lifecycle and restrictions.
+- Seyfert `src/client/plugins.ts` and `src/client/plugins/types.ts` — plugin lifecycle/typing.

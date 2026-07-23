@@ -50,24 +50,25 @@ Labels: **Source-verified** = checked against `src/**`; **External** = primarily
 40. [Cooldown](plugins/official/cooldown.md) — External
 41. [Scheduler](plugins/official/scheduler.md) — External
 42. [Logger](plugins/official/logger.md) — External
-43. [Queues](plugins/official/queues.md) — External
-44. [Chart.js](plugins/official/chartjs.md) — External
-45. [Creating Plugins](plugins/building/creating-plugins.md) — Source-verified
-46. [Runtime Registration](plugins/building/runtime-registration.md) — Source-verified
-47. [Services and Requirements](plugins/building/services-and-requirements.md) — Source-verified
-48. [Runtime Hooks](plugins/building/runtime-hooks.md) — Source-verified
-49. [Lifecycle and Diagnostics](plugins/building/lifecycle-and-diagnostics.md) — Source-verified
-50. [Testing Introduction](testing/index.md) — External
-51. [Setup](testing/writing-tests/setup.md) — External
-52. [Commands](testing/writing-tests/commands.md) — External
-53. [Events](testing/writing-tests/events.md) — External
-54. [Components](testing/writing-tests/components.md) — External
-55. [Modals](testing/writing-tests/modals.md) — External
-56. [Unit Tests](testing/writing-tests/unit-tests.md) — External
-57. [Mock Bot](testing/toolkit/mock-bot.md) — External
-58. [Dispatching](testing/toolkit/dispatching.md) — External
-59. [World & State](testing/toolkit/world.md) — External
-60. [Assertions](testing/toolkit/assertions.md) — External
-61. [MockGateway](testing/toolkit/gateway.md) — External
-62. [Fixtures](testing/toolkit/fixtures.md) — External
-63. [Defaults & Scope](testing/toolkit/defaults.md) — External
+43. [OpenTelemetry](plugins/official/opentelemetry.md) — External
+44. [Queues](plugins/official/queues.md) — External
+45. [Chart.js](plugins/official/chartjs.md) — External
+46. [Creating Plugins](plugins/building/creating-plugins.md) — Source-verified
+47. [Runtime Registration](plugins/building/runtime-registration.md) — Source-verified
+48. [Services and Requirements](plugins/building/services-and-requirements.md) — Source-verified
+49. [Runtime Hooks](plugins/building/runtime-hooks.md) — Source-verified
+50. [Lifecycle and Diagnostics](plugins/building/lifecycle-and-diagnostics.md) — Source-verified
+51. [Testing Introduction](testing/index.md) — External
+52. [Setup](testing/writing-tests/setup.md) — External
+53. [Commands](testing/writing-tests/commands.md) — External
+54. [Events](testing/writing-tests/events.md) — External
+55. [Components](testing/writing-tests/components.md) — External
+56. [Modals](testing/writing-tests/modals.md) — External
+57. [Unit Tests](testing/writing-tests/unit-tests.md) — External
+58. [Mock Bot](testing/toolkit/mock-bot.md) — External
+59. [Dispatching](testing/toolkit/dispatching.md) — External
+60. [World & State](testing/toolkit/world.md) — External
+61. [Assertions](testing/toolkit/assertions.md) — External
+62. [MockGateway](testing/toolkit/gateway.md) — External
+63. [Fixtures](testing/toolkit/fixtures.md) — External
+64. [Defaults & Scope](testing/toolkit/defaults.md) — External
